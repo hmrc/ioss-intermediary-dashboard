@@ -1,7 +1,4 @@
-import play.core.PlayVersion
-import play.sbt.PlayImport._
-import sbt.Keys.libraryDependencies
-import sbt._
+import sbt.*
 
 object AppDependencies {
 
@@ -10,13 +7,16 @@ object AppDependencies {
 
   val compile = Seq(
     "uk.gov.hmrc"             %% "bootstrap-backend-play-30"  % bootstrapVersion,
-    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-30"         % hmrcMongoVersion
+    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-30"         % hmrcMongoVersion,
+    "uk.gov.hmrc"             %% "domain-play-30"             % "10.0.0"
   )
 
   val test = Seq(
     "uk.gov.hmrc"             %% "bootstrap-test-play-30"     % bootstrapVersion            % Test,
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-30"    % hmrcMongoVersion            % Test,
+    "org.scalatestplus"       %% "scalacheck-1-15"            % "3.2.11.0"                  % Test,
+    "org.scalacheck"          %% "scalacheck"                 % "1.18.1"                    % Test
   )
 
-  val it = Seq.empty
+  val it: Seq[ModuleID] = Seq.empty
 }
