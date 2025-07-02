@@ -1,7 +1,9 @@
 import uk.gov.hmrc.DefaultBuildSettings
 
+import scala.collection.Seq
+
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "3.3.5"
 
 lazy val microservice = Project("ioss-intermediary-dashboard", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
@@ -11,7 +13,23 @@ lazy val microservice = Project("ioss-intermediary-dashboard", file("."))
     // suppress warnings in generated routes files
     scalacOptions += "-Wconf:src=routes/.*:s",
   )
-  .settings(CodeCoverageSettings.settings: _*)
+  .settings(CodeCoverageSettings.settings *)
+  .settings(PlayKeys.playDefaultPort := 10178)
+  .configs(Test)
+  .settings(inConfig(Test)(testSettings) *)
+  .settings(resolvers += Resolver.jcenterRepo)
+
+lazy val testSettings = Defaults.testSettings ++ Seq(
+  unmanagedSourceDirectories := Seq(
+    baseDirectory.value / "test",
+    baseDirectory.value / "test" / "testutils"
+  ),
+  parallelExecution := false,
+  fork := true,
+  javaOptions ++= Seq(
+    "-Dlogger.resource=logback-test.xml"
+  )
+)
 
 lazy val it = project
   .enablePlugins(PlayScala)
