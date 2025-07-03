@@ -1,3 +1,4 @@
 # microservice specific routes
 
-GET        /hello-world             uk.gov.hmrc.iossintermediarydashboard.controllers.MicroserviceHelloWorldController.hello()
+GET         /vat-information/:vrn                        uk.gov.hmrc.iossintermediarydashboard.controllers.VatInfoController.get(vrn: String)
+
