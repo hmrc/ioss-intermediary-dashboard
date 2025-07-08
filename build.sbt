@@ -17,7 +17,6 @@ lazy val microservice = Project("ioss-intermediary-dashboard", file("."))
   .settings(PlayKeys.playDefaultPort := 10178)
   .configs(Test)
   .settings(inConfig(Test)(testSettings) *)
-  .settings(resolvers += Resolver.jcenterRepo)
 
 lazy val testSettings = Defaults.testSettings ++ Seq(
   unmanagedSourceDirectories := Seq(
