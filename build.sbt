@@ -7,6 +7,7 @@ ThisBuild / scalaVersion := "3.3.5"
 
 lazy val microservice = Project("ioss-intermediary-dashboard", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
+  .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
