@@ -21,6 +21,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.{OptionValues, TryValues}
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.Vrn
@@ -44,8 +45,15 @@ trait BaseSpec
 
   val stubClock: Clock = Clock.fixed(LocalDate.now.atStartOfDay(ZoneId.systemDefault).toInstant, ZoneId.systemDefault)
 
-  protected def applicationBuilder(): GuiceApplicationBuilder =
+  protected def applicationBuilder(clock: Option[Clock] = None): GuiceApplicationBuilder = {
+
+    val clockToBind: Clock = clock.getOrElse(stubClock)
+    
     new GuiceApplicationBuilder()
+      .overrides(
+        bind[Clock].toInstance(clockToBind)
+      )
+  }
 
   val userId: String = "12345-userId"
   val testCredentials: Credentials = Credentials(userId, "GGW")

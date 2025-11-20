@@ -22,9 +22,10 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.domain.Vrn
 import uk.gov.hmrc.iossintermediarydashboard.models.*
 import uk.gov.hmrc.iossintermediarydashboard.models.des.VatCustomerInfo
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.{EtmpObligation, EtmpObligationDetails, EtmpObligations, EtmpObligationsFulfilmentStatus}
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.{Instant, LocalDate, ZoneOffset}
 
 trait Generators {
 
@@ -136,5 +137,68 @@ trait Generators {
       }
     }
   }
-  
+
+  def datesBetween(min: LocalDate, max: LocalDate): Gen[LocalDate] = {
+
+    def toMillis(date: LocalDate): Long =
+      date.atStartOfDay.atZone(ZoneOffset.UTC).toInstant.toEpochMilli
+
+    Gen.choose(toMillis(min), toMillis(max)).map {
+      millis =>
+        Instant.ofEpochMilli(millis).atOffset(ZoneOffset.UTC).toLocalDate
+    }
+  }
+
+  implicit lazy val arbitraryDate: Arbitrary[LocalDate] = {
+    Arbitrary {
+      datesBetween(LocalDate.of(2021, 7, 1), LocalDate.of(2025, 12, 31))
+    }
+  }
+
+  implicit lazy val generatePeriodKey: String = {
+
+    val year: String = arbitraryDate.arbitrary.sample.map(_.getYear.toString).head
+    val monthRepresentation: Seq[String] = Seq("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL")
+    val randomMonth: String = Gen.oneOf(monthRepresentation).sample.head
+    s"${year.substring(2, 3)}$randomMonth"
+  }
+
+  implicit lazy val arbitraryEtmpObligationDetails: Arbitrary[EtmpObligationDetails] = {
+    Arbitrary {
+      for {
+        status <- Gen.oneOf(EtmpObligationsFulfilmentStatus.values)
+        periodKey = generatePeriodKey
+      } yield {
+        EtmpObligationDetails(
+          status = status,
+          periodKey = periodKey
+        )
+      }
+    }
+  }
+
+  implicit lazy val arbitraryEtmpObligation: Arbitrary[EtmpObligation] = {
+    Arbitrary {
+      for {
+        obligationDetails <- Gen.listOfN(2, arbitraryEtmpObligationDetails.arbitrary)
+      } yield {
+        EtmpObligation(
+          obligationDetails = obligationDetails
+        )
+      }
+    }
+  }
+
+  implicit lazy val arbitraryEtmpObligations: Arbitrary[EtmpObligations] = {
+    Arbitrary {
+      for {
+        obligations <- Gen.listOfN(2,arbitraryEtmpObligation.arbitrary)
+      } yield {
+        EtmpObligations(
+          obligations = obligations
+        )
+      }
+    }
+  }
 }
+
