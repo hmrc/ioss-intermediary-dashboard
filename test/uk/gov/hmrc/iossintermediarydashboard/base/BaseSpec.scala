@@ -58,6 +58,8 @@ trait BaseSpec
   val userId: String = "12345-userId"
   val testCredentials: Credentials = Credentials(userId, "GGW")
 
+  val intermediaryNumber: String = "IN9001234567"
+
   val vatCustomerInfo: VatCustomerInfo =
     VatCustomerInfo(
       registrationDate = Some(LocalDate.now(stubClock)),

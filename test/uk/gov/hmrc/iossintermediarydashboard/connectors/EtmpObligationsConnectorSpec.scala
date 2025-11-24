@@ -19,7 +19,6 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
   private val idType: String = "IOSS"
   private val regimeType: String = "IOSS"
-  private val intermediaryNumber: String = "IN9001234567"
 
   private val dateFrom = LocalDate.now(stubClock).format(etmpDateFormatter)
   private val dateTo = LocalDate.now(stubClock).format(etmpDateFormatter)
@@ -31,8 +30,7 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
   )
 
   private val etmpOblgations: EtmpObligations = arbitraryEtmpObligations.arbitrary.sample.value
-
-  // TODO -> Headers and Auth etc
+  
   private def application: Application = applicationBuilder()
     .configure(
       "microservice.services.etmp-obligations.host" -> "127.0.0.1",
@@ -86,6 +84,9 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(urlWithQueryParams))
+            .withQueryParam("from", new EqualToPattern(dateFrom))
+            .withQueryParam("to", new EqualToPattern(dateTo))
+            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(OK)
               .withBody(expectedJsonResponse.toString)
@@ -108,6 +109,9 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(urlWithQueryParams))
+            .withQueryParam("from", new EqualToPattern(dateFrom))
+            .withQueryParam("to", new EqualToPattern(dateTo))
+            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(OK)
               .withBody(invalidJson)
@@ -128,6 +132,9 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(urlWithQueryParams))
+            .withQueryParam("from", new EqualToPattern(dateFrom))
+            .withQueryParam("to", new EqualToPattern(dateTo))
+            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(NOT_FOUND)
             )
@@ -152,6 +159,9 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
           server.stubFor(
             get(urlEqualTo(urlWithQueryParams))
+              .withQueryParam("from", new EqualToPattern(dateFrom))
+              .withQueryParam("to", new EqualToPattern(dateTo))
+              .withHeader("Authorization", equalTo("Bearer auth-token"))
               .willReturn(aResponse()
                 .withStatus(status)
                 .withBody(errorResponseJson)
@@ -175,6 +185,9 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(urlWithQueryParams))
+            .withQueryParam("from", new EqualToPattern(dateFrom))
+            .withQueryParam("to", new EqualToPattern(dateTo))
+            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(GATEWAY_TIMEOUT)
               .withFixedDelay(21000)

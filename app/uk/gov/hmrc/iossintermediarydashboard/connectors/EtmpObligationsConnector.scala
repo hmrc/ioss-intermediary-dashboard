@@ -17,6 +17,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.connectors
 
 import play.api.Logging
+import play.api.http.HeaderNames.AUTHORIZATION
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, StringContextOps}
@@ -27,6 +28,7 @@ import uk.gov.hmrc.iossintermediarydashboard.models.responses.GatewayTimeout
 
 import java.net.URL
 import java.time.Clock
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,14 +46,26 @@ case class EtmpObligationsConnector @Inject()(
     url"$etmpObligationsBaseUrl${etmpObligationsConfig.idType}/$intermediaryNumber/${etmpObligationsConfig.regimeType}"
   }
 
+  private def obligationsHeaders(correlationId: String): Seq[(String, String)] = etmpObligationsConfig.headers(correlationId)
+
   def getObligations(intermediaryNumber: String, queryParameters: EtmpObligationsQueryParameters): Future[EtmpObligationsResponse] = {
+
+    val correlationId = UUID.randomUUID().toString
+    val headersWithCorrelationId = obligationsHeaders(correlationId)
+
+    val headersWithoutAuth = headersWithCorrelationId.filterNot {
+      case (key, _) => key.matches(AUTHORIZATION)
+    }
+
+    logger.info(s"Sending getObligations request to ETMP with headers $headersWithoutAuth")
+
     httpClientV2.get(getObligationUrl(intermediaryNumber))
-      // TODO -> Add Headers
+      .setHeader(headersWithCorrelationId: _*)
       .transform(_.withQueryStringParameters(queryParameters.toSeqQueryParams: _*))
       .execute[EtmpObligationsResponse]
   }.recover {
     case e: HttpException =>
-      logger.error(s"")
+      logger.error(s"There was an unexpected error response from ETMP Obligations with status ${e.responseCode} and response body ${e.message} ") // TODO
       Left(GatewayTimeout)
   }
 }

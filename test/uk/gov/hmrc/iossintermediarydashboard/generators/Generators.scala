@@ -22,10 +22,10 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.domain.Vrn
 import uk.gov.hmrc.iossintermediarydashboard.models.*
 import uk.gov.hmrc.iossintermediarydashboard.models.des.VatCustomerInfo
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.{EtmpObligation, EtmpObligationDetails, EtmpObligations, EtmpObligationsFulfilmentStatus}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.{EtmpObligation, EtmpObligationDetails, EtmpObligations, EtmpObligationsFulfilmentStatus, EtmpObligationsQueryParameters}
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate, ZoneOffset}
+import java.time.{Instant, LocalDate, Month, ZoneOffset}
 
 trait Generators {
 
@@ -160,7 +160,7 @@ trait Generators {
     val year: String = arbitraryDate.arbitrary.sample.map(_.getYear.toString).head
     val monthRepresentation: Seq[String] = Seq("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL")
     val randomMonth: String = Gen.oneOf(monthRepresentation).sample.head
-    s"${year.substring(2, 3)}$randomMonth"
+    s"${year.substring(2, 4)}$randomMonth"
   }
 
   implicit lazy val arbitraryEtmpObligationDetails: Arbitrary[EtmpObligationDetails] = {
@@ -192,12 +192,53 @@ trait Generators {
   implicit lazy val arbitraryEtmpObligations: Arbitrary[EtmpObligations] = {
     Arbitrary {
       for {
-        obligations <- Gen.listOfN(2,arbitraryEtmpObligation.arbitrary)
+        obligations <- Gen.listOfN(2, arbitraryEtmpObligation.arbitrary)
       } yield {
         EtmpObligations(
           obligations = obligations
         )
       }
+    }
+  }
+
+  implicit lazy val arbitraryEtmpObligationsQueryParameters: Arbitrary[EtmpObligationsQueryParameters] = {
+    Arbitrary {
+      for {
+        fromDate <- arbitraryDate.arbitrary
+        toDate <- arbitraryDate.arbitrary
+        status <- Gen.oneOf(EtmpObligationsFulfilmentStatus.values)
+
+      } yield {
+        EtmpObligationsQueryParameters(
+          fromDate = fromDate.toString,
+          toDate = toDate.toString,
+          status = Some(status.toString)
+        )
+      }
+    }
+  }
+
+  implicit lazy val arbitraryPeriod: Arbitrary[Period] = {
+    Arbitrary {
+      for {
+        year <- Gen.choose(2022, 2099)
+        month <- Gen.oneOf(Month.values.toSeq)
+      } yield StandardPeriod(
+        year = year,
+        month = month
+      )
+    }
+  }
+
+  implicit lazy val arbitraryPeriodWithStatus: Arbitrary[PeriodWithStatus] = {
+    Arbitrary {
+      for {
+        period <- arbitraryPeriod.arbitrary
+        submissionStatus <- Gen.oneOf(SubmissionStatus.values)
+      } yield PeriodWithStatus(
+        period = period,
+        status = submissionStatus
+      )
     }
   }
 }
