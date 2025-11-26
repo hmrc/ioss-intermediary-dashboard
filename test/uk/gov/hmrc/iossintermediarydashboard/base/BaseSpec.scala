@@ -59,6 +59,7 @@ trait BaseSpec
   val testCredentials: Credentials = Credentials(userId, "GGW")
 
   val intermediaryNumber: String = "IN9001234567"
+  val iossNumber: String = "IM9001234567"
 
   val vatCustomerInfo: VatCustomerInfo =
     VatCustomerInfo(

@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models.etmp
+package uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations
 
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.iossintermediarydashboard.models.Period
 
-// TODO -> TEST
-case class EtmpObligations(obligations: Seq[EtmpObligation])
+case class EtmpObligationDetails(
+                                  status: EtmpObligationsFulfilmentStatus,
+                                  periodKey: String
+                                )
 
-object EtmpObligations {
-  
-  implicit val format: OFormat[EtmpObligations] = Json.format[EtmpObligations]
+object EtmpObligationDetails {
 
-  implicit class FromEtmpObligationsToPeriods(etmpObligations: EtmpObligations) {
+  implicit val format: OFormat[EtmpObligationDetails] = Json.format[EtmpObligationDetails]
+
+  implicit class FromEtmpObligationsToPeriods(etmpObligationDetails: Seq[EtmpObligationDetails]) {
     def getFulfilledPeriods: List[Period] = {
-      etmpObligations.obligations.flatMap(_.obligationDetails)
+      etmpObligationDetails
         .filter(_.status == EtmpObligationsFulfilmentStatus.Fulfilled)
         .map(p => Period.fromKey(p.periodKey))
         .toList
     }
   }
 }
-
-

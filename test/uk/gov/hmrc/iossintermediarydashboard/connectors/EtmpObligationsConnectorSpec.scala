@@ -9,7 +9,7 @@ import play.api.http.Status.*
 import play.api.libs.json.{JsValue, Json}
 import play.api.test.Helpers.running
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.{EtmpObligations, EtmpObligationsQueryParameters}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligations, EtmpObligationsQueryParameters}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.{EtmpObligationsError, GatewayTimeout, InvalidJson}
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 
@@ -29,8 +29,8 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
     status = None
   )
 
-  private val etmpOblgations: EtmpObligations = arbitraryEtmpObligations.arbitrary.sample.value
-  
+  private val etmpObligations: EtmpObligations = arbitraryEtmpObligations.arbitrary.sample.value
+
   private def application: Application = applicationBuilder()
     .configure(
       "microservice.services.etmp-obligations.host" -> "127.0.0.1",
@@ -51,7 +51,7 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
       "must return Right(OK) with a valid ETMP obligations response when the server returns OK with a valid response payload with no status present" in {
 
-        val expectedJsonResponse: JsValue = Json.toJson(etmpOblgations)
+        val expectedJsonResponse: JsValue = Json.toJson(etmpObligations)
 
         server.stubFor(
           get(urlEqualTo(urlWithQueryParams))
@@ -70,7 +70,7 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
           val result = connector.getObligations(intermediaryNumber, etmpObligationsQueryParameters).futureValue
 
-          result `mustBe` Right(etmpOblgations)
+          result `mustBe` Right(etmpObligations)
         }
       }
 
@@ -80,7 +80,7 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
         val etmpObligationsQueryParametersWithStatus: EtmpObligationsQueryParameters = etmpObligationsQueryParameters.copy(status = Some(status))
         val urlWithQueryParams: String = s"$url?from=${etmpObligationsQueryParameters.fromDate}&to=${etmpObligationsQueryParameters.toDate}&status=$status"
 
-        val expectedJsonResponse: JsValue = Json.toJson(etmpOblgations)
+        val expectedJsonResponse: JsValue = Json.toJson(etmpObligations)
 
         server.stubFor(
           get(urlEqualTo(urlWithQueryParams))
@@ -99,7 +99,7 @@ class EtmpObligationsConnectorSpec extends BaseSpec with WireMockHelper {
 
           val result = connector.getObligations(intermediaryNumber, etmpObligationsQueryParametersWithStatus).futureValue
 
-          result `mustBe` Right(etmpOblgations)
+          result `mustBe` Right(etmpObligations)
         }
       }
 

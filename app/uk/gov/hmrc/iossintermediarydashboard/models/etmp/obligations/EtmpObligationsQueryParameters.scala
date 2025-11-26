@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models.etmp
+package uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations
 
 import play.api.libs.json.{Json, OFormat}
 
-// TODO - TEST
 final case class EtmpObligationsQueryParameters(
                                                  fromDate: String,
                                                  toDate: String,

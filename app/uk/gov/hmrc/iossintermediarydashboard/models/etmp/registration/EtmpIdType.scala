@@ -14,22 +14,29 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models
+package uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration
 
-sealed trait SubmissionStatus
+import uk.gov.hmrc.iossintermediarydashboard.models.{Enumerable, WithName}
 
-object SubmissionStatus extends Enumerable.Implicits {
+sealed trait EtmpIdType
 
-  case object Due extends WithName("DUE") with SubmissionStatus
+object EtmpIdType extends Enumerable.Implicits {
 
-  case object Overdue extends WithName("OVERDUE") with SubmissionStatus
+  case object VRN extends WithName("VRN") with EtmpIdType
 
-  case object Complete extends WithName("COMPLETE") with SubmissionStatus
+  case object NINO extends WithName("NINO") with EtmpIdType
 
-  case object Next extends WithName("NEXT") with SubmissionStatus
+  case object UTR extends WithName("UTR") with EtmpIdType
 
-  val values: Seq[SubmissionStatus] = Seq(Due, Overdue, Complete, Next)
+  case object FTR extends WithName("FTR") with EtmpIdType
 
-  implicit val enumerable: Enumerable[SubmissionStatus] =
+  val values: Seq[EtmpIdType] = Seq(
+    VRN,
+    NINO,
+    UTR,
+    FTR
+  )
+
+  implicit val enumerable: Enumerable[EtmpIdType] =
     Enumerable(values.map(v => v.toString -> v): _*)
 }

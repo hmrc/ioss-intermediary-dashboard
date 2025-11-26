@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models
+package uk.gov.hmrc.iossintermediarydashboard.models.binders
 
-import play.api.libs.json.{Json, OFormat}
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-case class PeriodWithStatus(iossNumber: String, period: Period, status: SubmissionStatus)
+object Format {
 
-object PeriodWithStatus {
-
-  implicit val format: OFormat[PeriodWithStatus] = Json.format[PeriodWithStatus]
+  val eisDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z")
+    .withLocale(Locale.ENGLISH)
+    .withZone(ZoneId.of("GMT"))
 }

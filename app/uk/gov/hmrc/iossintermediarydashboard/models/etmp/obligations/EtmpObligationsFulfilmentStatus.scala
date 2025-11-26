@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models.etmp
+package uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations
 
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.EtmpObligationsFulfilmentStatus.values
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.EtmpObligationsFulfilmentStatus.values
 import uk.gov.hmrc.iossintermediarydashboard.models.{Enumerable, WithName}
 
-// TODO -> TEST
 sealed trait EtmpObligationsFulfilmentStatus
 
 object EtmpObligationsFulfilmentStatus extends Enumerable.Implicits {

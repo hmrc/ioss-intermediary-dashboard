@@ -1,0 +1,87 @@
+/*
+ * Copyright 2025 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.iossintermediarydashboard.controllers.actions
+
+import play.api.Logging
+import play.api.mvc.*
+import play.api.mvc.Results.Unauthorized
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
+import uk.gov.hmrc.auth.core.retrieve.~
+import uk.gov.hmrc.auth.core.*
+import uk.gov.hmrc.domain.Vrn
+import uk.gov.hmrc.http.{HeaderCarrier, UnauthorizedException}
+import uk.gov.hmrc.iossintermediarydashboard.config.AppConfig
+import uk.gov.hmrc.iossintermediarydashboard.models.requests.AuthorisedRequest
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
+
+import javax.inject.Inject
+import scala.concurrent.{ExecutionContext, Future}
+
+trait AuthAction extends ActionBuilder[AuthorisedRequest, AnyContent] with ActionFunction[Request, AuthorisedRequest]
+
+class AuthActionImpl @Inject()(
+                                override val authConnector: AuthConnector,
+                                override val parser: BodyParsers.Default,
+                                config: AppConfig
+                              )(implicit val executionContext: ExecutionContext) extends AuthAction with AuthorisedFunctions with Logging {
+
+  // TODO -> AuthAction Spec
+  // TODO -> AuthAction
+  // TODO -> Fake AuthAction
+  // TODO -> Bind to actionBuilder in Base Spec
+  // TODO -> Controller Spec
+  // TODO -> Controller and endpoint in app.routes
+  // TODO -> ??? owt else ???
+
+
+  override def invokeBlock[A](request: Request[A], block: AuthorisedRequest[A] => Future[Result]): Future[Result] = {
+
+    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+
+    authorised().retrieve(Retrievals.internalId and Retrievals.allEnrolments) {
+      case Some(internalId) ~ enrolments =>
+        val vrn: Vrn = findVrnFromEnrolments(enrolments)
+        findIntermediaryNumberFromEnrolments(enrolments).map { maybeIntermediaryNumber =>
+          block(AuthorisedRequest(request, internalId, enrolments, vrn, maybeIntermediaryNumber)) // TODO -> Need reg
+        }.getOrElse(throw new Exception("Unable to retrieve intermediary number"))
+
+      case _ =>
+        logger.warn("Unable to retrieve authorisation data")
+        throw new UnauthorizedException("Unable to retrieve authorisation data")
+    }.recover {
+      case a: AuthorisationException =>
+        logger.warn(s"Unauthorised given $a")
+        Unauthorized
+    }
+  }
+
+  private def findIntermediaryNumberFromEnrolments(enrolments: Enrolments): Option[String] = {
+    val intermediaryEnrolmentKey: String = config.intermediaryEnrolmentIdentifierName
+    enrolments.enrolments
+      .find(_.key == config.intermediaryEnrolment)
+      .flatMap(_.identifiers.find(id => id.key == intermediaryEnrolmentKey && id.value.nonEmpty).map(_.value))
+  }
+
+  private def findVrnFromEnrolments(enrolments: Enrolments): Vrn = {
+    enrolments.enrolments.find(_.key == config.vatEnrolment)
+      .flatMap(_.identifiers.find(id => id.key == config.vatEnrolmentIdentifierName).map(e => Vrn(e.value)))
+      .getOrElse {
+        logger.warn("User does not have a valid VAT enrolment")
+        throw new IllegalStateException("Missing VAT enrolment")
+      }
+  }
+}

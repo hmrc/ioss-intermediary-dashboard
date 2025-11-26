@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models
+package uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration
 
 import play.api.libs.json.{Json, OFormat}
 
-case class PeriodWithStatus(iossNumber: String, period: Period, status: SubmissionStatus)
+case class EtmpOtherIossIntermediaryRegistrations(issuedBy: String, intermediaryNumber: String)
 
-object PeriodWithStatus {
-
-  implicit val format: OFormat[PeriodWithStatus] = Json.format[PeriodWithStatus]
+object EtmpOtherIossIntermediaryRegistrations {
+  
+  implicit val format: OFormat[EtmpOtherIossIntermediaryRegistrations] = Json.format[EtmpOtherIossIntermediaryRegistrations]
 }

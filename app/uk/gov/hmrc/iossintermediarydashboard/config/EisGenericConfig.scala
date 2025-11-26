@@ -16,16 +16,23 @@
 
 package uk.gov.hmrc.iossintermediarydashboard.config
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import play.api.http.HeaderNames.{ACCEPT, CONTENT_TYPE, DATE, X_FORWARDED_HOST}
+import play.api.http.MimeTypes
+import uk.gov.hmrc.iossintermediarydashboard.models.binders.Format.eisDateTimeFormatter
 
-@Singleton
-class AppConfig @Inject()(config: Configuration) {
+import java.time.{Clock, LocalDateTime}
+import javax.inject.Inject
 
-  val appName: String = config.get[String]("appName")
-  
-  val vatEnrolment: String = config.get[String]("features.enrolment.vat-enrolment-key")
-  val vatEnrolmentIdentifierName: String = config.get[String]("features.enrolment.vat-enrolment-identifier-name")
-  val intermediaryEnrolment: String = config.get[String]("features.enrolment.intermediary-enrolment-key")
-  val intermediaryEnrolmentIdentifierName: String = config.get[String]("features.enrolment.intermediary-enrolment-identifier-name")
+class EisGenericConfig @Inject()(clock: Clock) {
+
+  private val XCorrelationId = "X-Correlation-Id"
+
+  def eisEtmpGenericHeaders(correlationId: String): Seq[(String, String)] = Seq(
+    CONTENT_TYPE -> MimeTypes.JSON,
+    ACCEPT -> MimeTypes.JSON,
+    DATE -> eisDateTimeFormatter.format(LocalDateTime.now(clock)),
+    XCorrelationId -> correlationId,
+    X_FORWARDED_HOST -> "MDTP"
+  )
+
 }

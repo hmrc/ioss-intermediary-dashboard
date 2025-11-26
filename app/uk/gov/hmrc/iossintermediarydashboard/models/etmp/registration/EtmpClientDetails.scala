@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models.etmp
+package uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration
 
 import play.api.libs.json.{Json, OFormat}
 
-// TODO -> TEST
-case class EtmpObligation(obligationDetails: Seq[EtmpObligationDetails])
+case class EtmpClientDetails(
+                              clientName: String,
+                              clientIossID: String,
+                              clientExcluded: Boolean
+                            )
 
-object EtmpObligation {
-  
-  implicit val format: OFormat[EtmpObligation] = Json.format[EtmpObligation]
+object EtmpClientDetails {
+
+  implicit val format: OFormat[EtmpClientDetails] = Json.format[EtmpClientDetails]
 }

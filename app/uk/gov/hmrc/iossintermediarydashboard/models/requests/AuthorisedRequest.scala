@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models
+package uk.gov.hmrc.iossintermediarydashboard.models.requests
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.mvc.{Request, WrappedRequest}
+import uk.gov.hmrc.auth.core.Enrolments
+import uk.gov.hmrc.domain.Vrn
 
-case class PeriodWithStatus(iossNumber: String, period: Period, status: SubmissionStatus)
 
-object PeriodWithStatus {
-
-  implicit val format: OFormat[PeriodWithStatus] = Json.format[PeriodWithStatus]
-}
+case class AuthorisedRequest[A](
+                                 request: Request[A],
+                                 userId: String,
+                                 enrolments: Enrolments,
+                                 vrn: Vrn,
+                                 intermediaryNumber: String
+                               ) extends WrappedRequest[A](request)

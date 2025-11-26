@@ -20,11 +20,9 @@ import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalatest.EitherValues
 import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import play.api.mvc.{PathBindable, QueryStringBindable}
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
-import uk.gov.hmrc.iossintermediarydashboard.generators.Generators
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getNext
 
 import java.time.{LocalDate, Month}

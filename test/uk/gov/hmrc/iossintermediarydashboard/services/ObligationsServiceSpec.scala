@@ -10,8 +10,8 @@ import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpObligationsConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.{getNext, getRunningPeriod, toEtmpPeriodString}
 import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.{Complete, Due, Next, Overdue}
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.EtmpObligationsFulfilmentStatus.Fulfilled
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.{EtmpObligation, EtmpObligationDetails, EtmpObligations, EtmpObligationsQueryParameters}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.EtmpObligationsFulfilmentStatus.{Fulfilled, Open}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligation, EtmpObligationDetails, EtmpObligationIdentification, EtmpObligations, EtmpObligationsQueryParameters}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.EtmpObligationsError
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -30,6 +30,8 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
   private val etmpObligationsQueryParameters: EtmpObligationsQueryParameters =
     arbitraryEtmpObligationsQueryParameters.arbitrary.sample.value
 
+  private val clientReferenceNumberB: String = "IM9001234568"
+
   override def beforeEach(): Unit = {
     Mockito.reset(mockEtmpObligationsConnector)
   }
@@ -40,92 +42,184 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
       val service: ObligationsService = new ObligationsService(mockEtmpObligationsConnector, stubClock)
 
-      "when all obligations are fulfilled" - {
+      "for each client" - {
 
-        "must return the current list of periods with status from the commencement date and the next period" in {
+        "when all obligations are fulfilled" - {
 
-          val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+          "must return the current list of periods with status from the commencement date and the next period" in {
 
-          val completedObligations: EtmpObligations = EtmpObligations(
+            val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+
+            val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
+            val period2: Period = getNext(period1)
+            val period3: Period = getNext(period2)
+            val nextPeriod: Period = getNext(period3)
+
+            val completedObligations: EtmpObligations = EtmpObligations(
+              obligations = Seq(
+                EtmpObligation(
+                  identification = EtmpObligationIdentification(iossNumber),
+                  obligationDetails = Seq(
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(period1)
+                    ),
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(period2)
+                    ),
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(period3)
+                    )
+                  )
+                ),
+                EtmpObligation(
+                  identification = EtmpObligationIdentification(clientReferenceNumberB),
+                  obligationDetails = Seq(
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+                    ),
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
+                    ),
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                    )
+                  )
+                )
+              )
+            )
+
+            when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
+
+            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+
+            val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+              iossNumber -> List(
+                PeriodWithStatus(iossNumber, period1, Complete),
+                PeriodWithStatus(iossNumber, period2, Complete),
+                PeriodWithStatus(iossNumber, period3, Complete),
+                PeriodWithStatus(iossNumber, nextPeriod, Next)
+              ),
+              clientReferenceNumberB -> List(
+                PeriodWithStatus(clientReferenceNumberB, period1, Complete),
+                PeriodWithStatus(clientReferenceNumberB, period2, Complete),
+                PeriodWithStatus(clientReferenceNumberB, period3, Complete),
+                PeriodWithStatus(clientReferenceNumberB, nextPeriod, Next)
+              )
+            )
+
+            result `mustBe` expectedList
+          }
+        }
+
+        "when all obligations are not fulfilled" - {
+
+          "must return a list of periods with status dating from the commencement date to the current period" in {
+
+            val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+
+            val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
+            val period2: Period = getNext(period1)
+            val period3: Period = getNext(period2)
+            val nextPeriod: Period = getNext(period3)
+
+            val withUnfulfilledObligations: EtmpObligations = EtmpObligations(
+              obligations = Seq(
+                EtmpObligation(
+                  identification = EtmpObligationIdentification(iossNumber),
+                  obligationDetails = Seq(
+                    EtmpObligationDetails(
+                      status = Open,
+                      periodKey = toEtmpPeriodString(period1)
+                    ),
+                    EtmpObligationDetails(
+                      status = Open,
+                      periodKey = toEtmpPeriodString(period2)
+                    ),
+                    EtmpObligationDetails(
+                      status = Open,
+                      periodKey = toEtmpPeriodString(period3)
+                    )
+                  )
+                ),
+                EtmpObligation(
+                  identification = EtmpObligationIdentification(clientReferenceNumberB),
+                  obligationDetails = Seq(
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(period1)
+                    ),
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(period2)
+                    ),
+                    EtmpObligationDetails(
+                      status = Fulfilled,
+                      periodKey = toEtmpPeriodString(period3)
+                    )
+                  )
+                )
+              )
+            )
+
+            when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(withUnfulfilledObligations).toFuture
+
+            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+
+            val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+              clientReferenceNumberB -> List(
+                PeriodWithStatus(clientReferenceNumberB, period1, Complete),
+                PeriodWithStatus(clientReferenceNumberB, period2, Complete),
+                PeriodWithStatus(clientReferenceNumberB, period3, Complete),
+                PeriodWithStatus(clientReferenceNumberB, nextPeriod, Next)
+              ),
+              iossNumber -> List(
+                PeriodWithStatus(iossNumber, period1, Overdue),
+                PeriodWithStatus(iossNumber, period2, Overdue),
+                PeriodWithStatus(iossNumber, period3, Due)
+              )
+            )
+
+            result `mustBe` expectedList
+          }
+        }
+
+        "must return the next period with status from the commencement date when the commencement date is the current period" in {
+
+          val commencementDate: LocalDate = LocalDate.now(stubClock)
+          val currentPeriod: Period = getRunningPeriod(commencementDate)
+
+          val startingObligation: EtmpObligations = EtmpObligations(
             obligations = Seq(
               EtmpObligation(
+                identification = EtmpObligationIdentification(iossNumber),
                 obligationDetails = Seq(
                   EtmpObligationDetails(
-                    status = Fulfilled,
-                    periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
-                  ),
-                  EtmpObligationDetails(
-                    status = Fulfilled,
-                    periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
-                  ),
-                  EtmpObligationDetails(
-                    status = Fulfilled,
-                    periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                    status = Open,
+                    periodKey = toEtmpPeriodString(currentPeriod)
                   )
                 )
               )
             )
           )
 
-          when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
+          when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsEWithStatus(intermediaryNumber, commencementDate).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
 
-          val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
-          val period2: Period = getNext(period1)
-          val period3: Period = getNext(period2)
-          val nextPeriod: Period = getNext(period3)
-
-          val expectedList: List[PeriodWithStatus] = List(
-            PeriodWithStatus(period1, Complete),
-            PeriodWithStatus(period2, Complete),
-            PeriodWithStatus(period3, Complete),
-            PeriodWithStatus(nextPeriod, Next)
+          val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+            iossNumber -> List(
+              PeriodWithStatus(iossNumber, currentPeriod, Next)
+            )
           )
 
           result `mustBe` expectedList
         }
-      }
-
-      "when all obligations are not fulfilled" - {
-
-        "must return a list of periods with status dating from the commencement date to the current period" in {
-
-          when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(etmpObligations).toFuture
-
-          val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
-          val result = service.getPeriodsEWithStatus(intermediaryNumber, commencementDate).futureValue
-
-          val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
-          val period2: Period = getNext(period1)
-          val period3: Period = getNext(period2)
-
-          val expectedList: List[PeriodWithStatus] = List(
-            PeriodWithStatus(period1, Overdue),
-            PeriodWithStatus(period2, Overdue),
-            PeriodWithStatus(period3, Due)
-          )
-
-          result `mustBe` expectedList
-        }
-      }
-
-      "must return the next period with status from the commencement date when the commencement date is the current period" in {
-
-        val emptyObligations: EtmpObligations = EtmpObligations(obligations = Seq.empty)
-
-        when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(emptyObligations).toFuture
-
-        val commencementDate: LocalDate = LocalDate.now(stubClock)
-        val result = service.getPeriodsEWithStatus(intermediaryNumber, commencementDate).futureValue
-
-        val currentPeriod: Period = getRunningPeriod(commencementDate)
-
-        val expectedList: List[PeriodWithStatus] = List(
-          PeriodWithStatus(currentPeriod, Next)
-        )
-
-        result `mustBe` expectedList
       }
     }
 
@@ -137,65 +231,65 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
         val commencementDate: LocalDate = LocalDate.now(stubClock)
         val periodWithStatus: PeriodWithStatus = arbitraryPeriodWithStatus.arbitrary.sample.value
-          .copy(period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+          .copy(period = getRunningPeriod(commencementDate))
 
         val nextPeriod: Period = getNext(periodWithStatus.period)
         val periodAfterNext: Period = getNext(nextPeriod)
         val nextPeriodAfterLast: Period = getNext(periodAfterNext)
 
-        val currentPeriodWithStatus: List[PeriodWithStatus] = List(
-          PeriodWithStatus(periodWithStatus.period, Complete),
-          PeriodWithStatus(nextPeriod, Complete),
-          PeriodWithStatus(periodAfterNext, Complete)
+        val currentPeriodsWithStatus: List[PeriodWithStatus] = List(
+          PeriodWithStatus(iossNumber, periodWithStatus.period, Complete),
+          PeriodWithStatus(iossNumber, nextPeriod, Complete),
+          PeriodWithStatus(iossNumber, periodAfterNext, Complete)
         )
 
         val addNextIfAllCompleted = PrivateMethod[List[PeriodWithStatus]](Symbol("addNextIfAllCompleted"))
 
-        val result = service invokePrivate addNextIfAllCompleted(currentPeriodWithStatus, commencementDate)
+        val result = service invokePrivate addNextIfAllCompleted(iossNumber, currentPeriodsWithStatus, commencementDate)
 
-        result `mustBe` currentPeriodWithStatus :+ PeriodWithStatus(nextPeriodAfterLast, Next)
+        result `mustBe` currentPeriodsWithStatus :+ PeriodWithStatus(iossNumber, nextPeriodAfterLast, Next)
       }
 
       "must return the current periods if some of the other listed periods are submission status compete" in {
 
         val commencementDate: LocalDate = LocalDate.now(stubClock)
         val periodWithStatus: PeriodWithStatus = arbitraryPeriodWithStatus.arbitrary.sample.value
-          .copy(period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+          .copy(period = getRunningPeriod(commencementDate))
 
         val nextPeriod: Period = getNext(periodWithStatus.period)
         val periodAfterNext: Period = getNext(nextPeriod)
 
-        val currentPeriodWithStatus: List[PeriodWithStatus] = List(
-          PeriodWithStatus(periodWithStatus.period, Complete),
-          PeriodWithStatus(nextPeriod, Next),
-          PeriodWithStatus(periodAfterNext, Next)
+        val currentPeriodsWithStatus: List[PeriodWithStatus] = List(
+          PeriodWithStatus(iossNumber, periodWithStatus.period, Complete),
+          PeriodWithStatus(iossNumber, nextPeriod, Next),
+          PeriodWithStatus(iossNumber, periodAfterNext, Next)
         )
 
         val addNextIfAllCompleted = PrivateMethod[List[PeriodWithStatus]](Symbol("addNextIfAllCompleted"))
 
-        val result = service invokePrivate addNextIfAllCompleted(currentPeriodWithStatus, commencementDate)
+        val result = service invokePrivate addNextIfAllCompleted(iossNumber, currentPeriodsWithStatus, commencementDate)
 
-        result `mustBe` currentPeriodWithStatus
+        result `mustBe` currentPeriodsWithStatus
       }
 
       "must return the current periods if none of the other listed periods are compete" in {
 
         val commencementDate: LocalDate = LocalDate.now(stubClock)
         val periodWithStatus: PeriodWithStatus = arbitraryPeriodWithStatus.arbitrary.sample.value
-          .copy(period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+          .copy(period = getRunningPeriod(commencementDate))
 
         val nextPeriod: Period = getNext(periodWithStatus.period)
         val periodAfterNext: Period = getNext(nextPeriod)
 
         val allPeriodsWithStatus: List[PeriodWithStatus] = List(
-          PeriodWithStatus(periodWithStatus.period, Due),
-          PeriodWithStatus(nextPeriod, SubmissionStatus.Next),
-          PeriodWithStatus(periodAfterNext, SubmissionStatus.Next)
+          PeriodWithStatus(iossNumber, periodWithStatus.period, Due),
+          PeriodWithStatus(iossNumber, nextPeriod, SubmissionStatus.Next),
+          PeriodWithStatus(iossNumber, periodAfterNext, SubmissionStatus.Next)
         )
 
         val addNextIfAllCompleted = PrivateMethod[List[PeriodWithStatus]](Symbol("addNextIfAllCompleted"))
 
-        val result = service invokePrivate addNextIfAllCompleted(allPeriodsWithStatus, commencementDate)
+        val result = service invokePrivate addNextIfAllCompleted(iossNumber, allPeriodsWithStatus, commencementDate)
 
         result `mustBe` allPeriodsWithStatus
       }
@@ -205,13 +299,14 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
         val commencementDate: LocalDate = LocalDate.now(stubClock)
         val nextPeriodWithStatus: PeriodWithStatus = PeriodWithStatus(
-          period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth),
+          iossNumber = iossNumber,
+          period = getRunningPeriod(commencementDate),
           status = Next
         )
 
         val addNextIfAllCompleted = PrivateMethod[List[PeriodWithStatus]](Symbol("addNextIfAllCompleted"))
 
-        val result = service invokePrivate addNextIfAllCompleted(List.empty, commencementDate)
+        val result = service invokePrivate addNextIfAllCompleted(iossNumber, List.empty, commencementDate)
 
         result `mustBe` List(nextPeriodWithStatus)
       }
@@ -224,7 +319,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
       "must return the current period when the commencement date is on or before the last day of the current period" in {
 
         val stubDate: LocalDate = LocalDate.ofInstant(stubClock.instant(), ZoneId.systemDefault())
-        val currentPeriod: Period = StandardPeriod(stubDate.getYear, stubDate.getMonth)
+        val currentPeriod: Period = getRunningPeriod(stubDate)
 
         val commencementDate = currentPeriod.lastDay
 
@@ -238,7 +333,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
       "must return the next period when the commencement date is after the last day of the current period" in {
 
         val stubDate: LocalDate = LocalDate.ofInstant(stubClock.instant(), ZoneId.systemDefault())
-        val currentPeriod: Period = StandardPeriod(stubDate.getYear, stubDate.getMonth)
+        val currentPeriod: Period = getRunningPeriod(stubDate)
         val nextPeriod: Period = getNext(currentPeriod)
 
         val commencementDate = currentPeriod.lastDay.plusDays(1)
@@ -253,7 +348,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
       "must return the next period of a given list of periods" in {
 
         val stubDate: LocalDate = LocalDate.ofInstant(stubClock.instant(), ZoneId.systemDefault())
-        val currentPeriod: Period = StandardPeriod(stubDate.getYear, stubDate.getMonth)
+        val currentPeriod: Period = getRunningPeriod(stubDate)
 
         val period1: Period = getNext(currentPeriod)
         val period2: Period = getNext(period1)

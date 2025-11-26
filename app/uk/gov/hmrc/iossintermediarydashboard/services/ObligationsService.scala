@@ -1,8 +1,24 @@
+/*
+ * Copyright 2025 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.iossintermediarydashboard.services
 
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpObligationsConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getNext
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.{EtmpObligations, EtmpObligationsQueryParameters}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligations, EtmpObligationsQueryParameters}
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -18,12 +34,12 @@ class ObligationsService @Inject()(
 
   private val today: LocalDate = LocalDate.now(clock)
 
-  def getPeriodsEWithStatus(
-                             intermediaryNumber: String,
-                             commencementDate: LocalDate
-                           )(implicit ec: ExecutionContext): Future[Seq[PeriodWithStatus]] = {
+  def getPeriodsWithStatus(
+                            intermediaryNumber: String,
+                            commencementDate: LocalDate
+                          )(implicit ec: ExecutionContext): Future[Map[String, Seq[PeriodWithStatus]]] = {
 
-    val allPeriods: Seq[Period] = getAllPeriodsBetween(commencementDate, today)
+    val allPeriodsToDate: Seq[Period] = getAllPeriodsBetween(commencementDate, today)
 
     val etmpObligationsQueryParameters = EtmpObligationsQueryParameters(
       fromDate = commencementDate.format(etmpDateFormatter),
@@ -34,11 +50,18 @@ class ObligationsService @Inject()(
     for {
       etmpObligations <- getObligations(intermediaryNumber, etmpObligationsQueryParameters)
     } yield {
-      val allFulfilledPeriods: List[PeriodWithStatus] = allPeriods.map { period =>
-        decideStatus(period, etmpObligations.getFulfilledPeriods)
-      }.toList
 
-      addNextIfAllCompleted(allFulfilledPeriods, commencementDate)
+      etmpObligations.obligations.groupBy(_.identification.referenceNumber).toList.collect {
+        (iossNumber, allObligationsForClient) =>
+          allObligationsForClient.flatMap { etmpObligation =>
+
+            val allCurrentPeriodsForClient: List[PeriodWithStatus] = allPeriodsToDate.map { period =>
+              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods)
+            }.toList
+
+            addNextIfAllCompleted(iossNumber, allCurrentPeriodsForClient, commencementDate)
+          }
+      }.flatten.groupBy(_.iossNumber)
     }
   }
 
@@ -52,10 +75,10 @@ class ObligationsService @Inject()(
     }
   }
 
-  private def addNextIfAllCompleted(currentPeriods: List[PeriodWithStatus], commencementLocalDate: LocalDate): List[PeriodWithStatus] = {
+  private def addNextIfAllCompleted(iossNumber: String, currentPeriods: List[PeriodWithStatus], commencementLocalDate: LocalDate): List[PeriodWithStatus] = {
     val nextPeriod: Period = getNextPeriod(currentPeriods.map(_.period), commencementLocalDate)
     if (currentPeriods.forall(_.status == SubmissionStatus.Complete)) {
-      currentPeriods ++ Seq(PeriodWithStatus(nextPeriod, SubmissionStatus.Next))
+      currentPeriods ++ Seq(PeriodWithStatus(iossNumber, nextPeriod, SubmissionStatus.Next))
     } else {
       currentPeriods
     }
@@ -87,13 +110,13 @@ class ObligationsService @Inject()(
     }
   }
 
-  private def decideStatus(period: Period, fulfilledPeriods: List[Period]): PeriodWithStatus = {
+  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period]): PeriodWithStatus = {
     if (fulfilledPeriods.contains(period)) {
-      PeriodWithStatus(period, SubmissionStatus.Complete)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)
     } else if (LocalDate.now(clock).isAfter(period.paymentDeadline)) {
-      PeriodWithStatus(period, SubmissionStatus.Overdue)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Overdue)
     } else {
-      PeriodWithStatus(period, SubmissionStatus.Due)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Due)
     }
   }
 }

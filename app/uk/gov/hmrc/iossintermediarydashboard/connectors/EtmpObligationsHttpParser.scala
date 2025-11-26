@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.http.Status.OK
 import play.api.libs.json.{JsError, JsSuccess}
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.EtmpObligations
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.EtmpObligations
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.{ErrorResponse, EtmpObligationsError, InvalidJson}
 
 object EtmpObligationsHttpParser extends Logging {

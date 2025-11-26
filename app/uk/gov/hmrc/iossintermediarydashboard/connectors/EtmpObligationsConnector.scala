@@ -23,7 +23,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, StringContextOps}
 import uk.gov.hmrc.iossintermediarydashboard.config.{EtmpObligationsConfig, Service}
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpObligationsHttpParser.{EtmpObligationsReads, EtmpObligationsResponse}
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.EtmpObligationsQueryParameters
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.EtmpObligationsQueryParameters
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.GatewayTimeout
 
 import java.net.URL
@@ -43,7 +43,7 @@ case class EtmpObligationsConnector @Inject()(
   private val etmpObligationsBaseUrl: Service = etmpObligationsConfig.baseUrl
 
   private def getObligationUrl(intermediaryNumber: String): URL = {
-    url"$etmpObligationsBaseUrl${etmpObligationsConfig.idType}/$intermediaryNumber/${etmpObligationsConfig.regimeType}"
+    url"${etmpObligationsBaseUrl}enterprise/obligation-data/${etmpObligationsConfig.idType}/$intermediaryNumber/${etmpObligationsConfig.regimeType}"
   }
 
   private def obligationsHeaders(correlationId: String): Seq[(String, String)] = etmpObligationsConfig.headers(correlationId)
@@ -65,7 +65,7 @@ case class EtmpObligationsConnector @Inject()(
       .execute[EtmpObligationsResponse]
   }.recover {
     case e: HttpException =>
-      logger.error(s"There was an unexpected error response from ETMP Obligations with status ${e.responseCode} and response body ${e.message} ") // TODO
+      logger.error(s"There was an unexpected error response from ETMP Obligations with status ${e.responseCode} and response body ${e.message} ")
       Left(GatewayTimeout)
   }
 }
