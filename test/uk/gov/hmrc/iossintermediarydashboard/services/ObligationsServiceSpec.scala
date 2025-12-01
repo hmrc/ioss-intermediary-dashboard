@@ -253,6 +253,42 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
           result `mustBe` expectedList
           result must not contain periodBeforeCommencementDate
         }
+
+        "must not return periods later than today" in {
+
+          val today: LocalDate = LocalDate.now(stubClock)
+          val commencementDate: LocalDate = today.minusMonths(2)
+          val currentPeriod: Period = getRunningPeriod(today)
+          val nextPeriodAfterCurrent: Period = getNext(currentPeriod)
+
+          val startingObligation: EtmpObligations = EtmpObligations(
+            obligations = Seq(
+              EtmpObligation(
+                identification = EtmpObligationIdentification(iossNumber),
+                obligationDetails = Seq(
+                  EtmpObligationDetails(
+                    status = Open,
+                    periodKey = toEtmpPeriodString(nextPeriodAfterCurrent)
+                  )
+                )
+              )
+            )
+          )
+
+          when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
+
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+
+          val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+            iossNumber -> List(
+              PeriodWithStatus(iossNumber, getRunningPeriod(commencementDate), Overdue),
+              PeriodWithStatus(iossNumber, getNext(getRunningPeriod(commencementDate)), Due)
+            )
+          )
+
+          result `mustBe` expectedList
+          result must not contain nextPeriodAfterCurrent
+        }
       }
     }
 
