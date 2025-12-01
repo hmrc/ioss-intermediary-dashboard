@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models.binders
+package uk.gov.hmrc.iossintermediarydashboard.models
 
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import play.api.libs.json.{Json, OFormat}
 
-object Format {
+case class CurrentReturns(
+                           iossNumber: String,
+                           incompleteReturns: Seq[Return],
+                           completedReturns: Seq[Return]
+                         )
 
-  val eisDateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z")
-    .withLocale(Locale.ENGLISH)
-    .withZone(ZoneId.of("GMT"))
+object CurrentReturns {
+
+  implicit val format: OFormat[CurrentReturns] = Json.format[CurrentReturns]
 }

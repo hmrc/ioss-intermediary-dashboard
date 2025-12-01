@@ -17,14 +17,14 @@
 package uk.gov.hmrc.iossintermediarydashboard.models.requests
 
 import play.api.mvc.{Request, WrappedRequest}
-import uk.gov.hmrc.auth.core.Enrolments
 import uk.gov.hmrc.domain.Vrn
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpDisplayRegistration
 
 
 case class AuthorisedRequest[A](
                                  request: Request[A],
                                  userId: String,
-                                 enrolments: Enrolments,
                                  vrn: Vrn,
-                                 intermediaryNumber: String
+                                 intermediaryNumber: String,
+                                 registration: EtmpDisplayRegistration
                                ) extends WrappedRequest[A](request)

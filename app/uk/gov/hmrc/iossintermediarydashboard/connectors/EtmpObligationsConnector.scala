@@ -63,9 +63,11 @@ case class EtmpObligationsConnector @Inject()(
       .setHeader(headersWithCorrelationId: _*)
       .transform(_.withQueryStringParameters(queryParameters.toSeqQueryParams: _*))
       .execute[EtmpObligationsResponse]
-  }.recover {
-    case e: HttpException =>
-      logger.error(s"There was an unexpected error response from ETMP Obligations with status ${e.responseCode} and response body ${e.message} ")
-      Left(GatewayTimeout)
+      .recover {
+        case e: HttpException =>
+          logger.error(s"There was an unexpected error response from ETMP Obligations with status ${e.responseCode} " +
+            s"and response body ${e.message} ")
+          Left(GatewayTimeout)
+      }
   }
 }

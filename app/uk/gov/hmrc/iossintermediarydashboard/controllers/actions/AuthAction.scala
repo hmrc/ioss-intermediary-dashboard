@@ -19,12 +19,13 @@ package uk.gov.hmrc.iossintermediarydashboard.controllers.actions
 import play.api.Logging
 import play.api.mvc.*
 import play.api.mvc.Results.Unauthorized
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals
 import uk.gov.hmrc.auth.core.retrieve.~
-import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.domain.Vrn
 import uk.gov.hmrc.http.{HeaderCarrier, UnauthorizedException}
 import uk.gov.hmrc.iossintermediarydashboard.config.AppConfig
+import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.requests.AuthorisedRequest
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
@@ -36,17 +37,9 @@ trait AuthAction extends ActionBuilder[AuthorisedRequest, AnyContent] with Actio
 class AuthActionImpl @Inject()(
                                 override val authConnector: AuthConnector,
                                 override val parser: BodyParsers.Default,
+                                registrationConnector: EtmpRegistrationConnector,
                                 config: AppConfig
                               )(implicit val executionContext: ExecutionContext) extends AuthAction with AuthorisedFunctions with Logging {
-
-  // TODO -> AuthAction Spec
-  // TODO -> AuthAction
-  // TODO -> Fake AuthAction
-  // TODO -> Bind to actionBuilder in Base Spec
-  // TODO -> Controller Spec
-  // TODO -> Controller and endpoint in app.routes
-  // TODO -> ??? owt else ???
-
 
   override def invokeBlock[A](request: Request[A], block: AuthorisedRequest[A] => Future[Result]): Future[Result] = {
 
@@ -54,10 +47,15 @@ class AuthActionImpl @Inject()(
 
     authorised().retrieve(Retrievals.internalId and Retrievals.allEnrolments) {
       case Some(internalId) ~ enrolments =>
-        val vrn: Vrn = findVrnFromEnrolments(enrolments)
-        findIntermediaryNumberFromEnrolments(enrolments).map { maybeIntermediaryNumber =>
-          block(AuthorisedRequest(request, internalId, enrolments, vrn, maybeIntermediaryNumber)) // TODO -> Need reg
-        }.getOrElse(throw new Exception("Unable to retrieve intermediary number"))
+        findIntermediaryNumberFromEnrolments(enrolments) match {
+          case Some(intermediaryNumber) =>
+            val vrn: Vrn = findVrnFromEnrolments(enrolments)
+            getRegistrationAndBlock(request, block, vrn, internalId, intermediaryNumber)
+
+          case _ =>
+            logger.warn(s"Insufficient enrolments")
+            throw InsufficientEnrolments("Insufficient enrolments")
+        }
 
       case _ =>
         logger.warn("Unable to retrieve authorisation data")
@@ -66,6 +64,24 @@ class AuthActionImpl @Inject()(
       case a: AuthorisationException =>
         logger.warn(s"Unauthorised given $a")
         Unauthorized
+    }
+  }
+
+  private def getRegistrationAndBlock[A](
+                                          request: Request[A],
+                                          block: AuthorisedRequest[A] => Future[Result],
+                                          vrn: Vrn,
+                                          internalId: String,
+                                          intermediaryNumber: String,
+                                        )(implicit hc: HeaderCarrier): Future[Result] = {
+
+    registrationConnector.getRegistration(intermediaryNumber).flatMap {
+      case Right(registration) =>
+        block(AuthorisedRequest(request, internalId, vrn, intermediaryNumber, registration))
+
+      case Left(e) =>
+        logger.error(s"Unable to retrieve registration with error: ${e.body}.")
+        throw Exception(s"There was an error retrieving registration with error: ${e.body}.")
     }
   }
 

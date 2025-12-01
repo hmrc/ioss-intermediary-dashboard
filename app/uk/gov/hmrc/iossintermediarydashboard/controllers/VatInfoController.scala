@@ -17,9 +17,10 @@
 package uk.gov.hmrc.iossintermediarydashboard.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.domain.Vrn
 import uk.gov.hmrc.iossintermediarydashboard.connectors.GetVatInfoConnector
+import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.AuthenticatedControllerComponents
 import uk.gov.hmrc.iossintermediarydashboard.logging.Logging
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.NotFound as DesNotFound
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -28,11 +29,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class VatInfoController @Inject()(
-                                   cc: ControllerComponents,
+                                   cc: AuthenticatedControllerComponents,
                                    getVatInfoConnector: GetVatInfoConnector
                                  )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
-  def get(vrn: String): Action[AnyContent] = Action.async {
+  def get(vrn: String): Action[AnyContent] = cc.auth().async {
     implicit request =>
       getVatInfoConnector.getVatCustomerDetails(Vrn(vrn)).map {
         case Right(response) =>

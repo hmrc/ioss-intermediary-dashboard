@@ -16,33 +16,26 @@
 
 package uk.gov.hmrc.iossintermediarydashboard.connectors
 
-import play.api.Logging
+import play.api.{Configuration, Logging}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, StringContextOps}
-import uk.gov.hmrc.iossintermediarydashboard.config.EtmpDisplayRegistrationConfig
+import uk.gov.hmrc.iossintermediarydashboard.config.Service
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationHttpParser.{EtmpDisplayRegistrationReads, EtmpDisplayRegistrationResponse}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.GatewayTimeout
 
-import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class EtmpRegistrationConnector @Inject()(
                                            httpClientV2: HttpClientV2,
-                                           etmpDisplayRegistrationConfig: EtmpDisplayRegistrationConfig
+                                           config: Configuration
                                          )(implicit ec: ExecutionContext) extends Logging {
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private val displayRegistrationUrl: Service = config.get[Service]("microservice.services.ioss-intermediary-registration")
 
-  private def displayRegistrationHeaders(correlationId: String): Seq[(String, String)] = etmpDisplayRegistrationConfig.eisEtmpGetHeaders(correlationId)
+  def getRegistration(intermediaryNumber: String)(implicit hc: HeaderCarrier): Future[EtmpDisplayRegistrationResponse] = {
 
-  def getRegistration(intermediaryNumber: String): Future[EtmpDisplayRegistrationResponse] = {
-
-    val correlationId = UUID.randomUUID.toString
-    val headersWithCorrelationId = displayRegistrationHeaders(correlationId)
-
-    httpClientV2.get(url"${etmpDisplayRegistrationConfig.baseUrl}vec/iossregistration/viewreg/v1/$intermediaryNumber")
-      .setHeader(headersWithCorrelationId: _*)
+    httpClientV2.get(url"${displayRegistrationUrl}/get-registration/$intermediaryNumber")
       .execute[EtmpDisplayRegistrationResponse]
       .recover {
         case e: HttpException =>

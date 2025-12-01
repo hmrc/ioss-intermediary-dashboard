@@ -24,20 +24,23 @@ import uk.gov.hmrc.iossintermediarydashboard.models.requests.AuthorisedRequest
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-trait DefaultAuthenticatedControllerComponents extends ControllerComponents {
+trait AuthenticatedControllerComponents extends ControllerComponents {
 
   def actionBuilder: DefaultActionBuilder
 
+  def identify: AuthAction
+
   def auth(): ActionBuilder[AuthorisedRequest, AnyContent] =
     actionBuilder andThen
-      ??? // TODO -> identify: AuthAction
+      identify
 }
 
-case class DefaultControllerComponents @Inject()(
-                                                  actionBuilder: DefaultActionBuilder,
-                                                  parsers: PlayBodyParsers,
-                                                  messagesApi: MessagesApi,
-                                                  langs: Langs,
-                                                  fileMimeTypes: FileMimeTypes,
-                                                  executionContext: ExecutionContext // TODO -> identify: AuthAction
-                                                ) extends DefaultAuthenticatedControllerComponents
+case class DefaultAuthenticatedControllerComponents @Inject()(
+                                                               actionBuilder: DefaultActionBuilder,
+                                                               parsers: PlayBodyParsers,
+                                                               messagesApi: MessagesApi,
+                                                               langs: Langs,
+                                                               fileMimeTypes: FileMimeTypes,
+                                                               executionContext: ExecutionContext,
+                                                               identify: AuthAction
+                                                             ) extends AuthenticatedControllerComponents

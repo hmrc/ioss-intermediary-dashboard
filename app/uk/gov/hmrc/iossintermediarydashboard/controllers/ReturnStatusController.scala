@@ -16,20 +16,32 @@
 
 package uk.gov.hmrc.iossintermediarydashboard.controllers
 
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.iossintermediarydashboard.services.ObligationsService
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent}
+import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.DefaultAuthenticatedControllerComponents
+import uk.gov.hmrc.iossintermediarydashboard.models.CurrentReturns
+import uk.gov.hmrc.iossintermediarydashboard.services.ReturnsService
+import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.LocalDate
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class ReturnStatusController @Inject()(
-                                        cc: ControllerComponents,
-                                        obligationsService: ObligationsService
+                                        cc: DefaultAuthenticatedControllerComponents,
+                                        returnsService: ReturnsService
                                       )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
-  def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.actionBuilder {
-    implicit request => ???
-//     val x =  obligationsService.getPeriodsWithStatus(intermediaryNumber, ???)
+  def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.auth().async {
+    implicit request =>
+
+      val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
+
+      val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate)
+
+      for {
+        currentReturns <- futureCurrentReturns
+      } yield Ok(Json.toJson(currentReturns))
   }
 }

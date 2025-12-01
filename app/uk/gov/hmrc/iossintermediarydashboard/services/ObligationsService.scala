@@ -21,7 +21,6 @@ import uk.gov.hmrc.iossintermediarydashboard.models.Period.getNext
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligations, EtmpObligationsQueryParameters}
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
-import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
 
 import java.time.{Clock, LocalDate}
 import javax.inject.Inject
@@ -69,8 +68,8 @@ class ObligationsService @Inject()(
                               intermediaryNumber: String,
                               queryParameters: EtmpObligationsQueryParameters
                             )(implicit ec: ExecutionContext): Future[EtmpObligations] = {
-    etmpObligationsConnector.getObligations(intermediaryNumber, queryParameters).flatMap {
-      case Right(etmpObligations: EtmpObligations) => etmpObligations.toFuture
+    etmpObligationsConnector.getObligations(intermediaryNumber, queryParameters).map {
+      case Right(etmpObligations: EtmpObligations) => etmpObligations
       case Left(error) => throw new Exception(error.body)
     }
   }

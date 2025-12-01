@@ -518,5 +518,39 @@ trait Generators {
       intermediaryNumber <- Gen.listOfN(12, Gen.alphaChar).map(_.mkString)
     } yield intermediaryNumber
   }
+
+  implicit lazy val arbitraryReturn: Arbitrary[Return] = {
+    Arbitrary {
+      for {
+        periodWithStatus <- arbitraryPeriodWithStatus.arbitrary
+      } yield {
+        Return(
+          period = periodWithStatus.period,
+          firstDay = periodWithStatus.period.firstDay,
+          lastDay = periodWithStatus.period.lastDay,
+          dueDate = periodWithStatus.period.paymentDeadline,
+          submissionStatus = periodWithStatus.status,
+          inProgress = false,
+          isOldest = false
+        )
+      }
+    }
+  }
+
+  implicit lazy val arbitraryCurrentReturns: Arbitrary[CurrentReturns] = {
+    Arbitrary {
+      for {
+        iossNumber <- arbitrary[String]
+        incompleteReturns <- Gen.listOfN(2, arbitraryReturn.arbitrary)
+        completedReturns <- Gen.listOfN(2, arbitraryReturn.arbitrary)
+      } yield {
+        CurrentReturns(
+          iossNumber = iossNumber,
+          incompleteReturns = incompleteReturns,
+          completedReturns = completedReturns
+        )
+      }
+    }
+  }
 }
 

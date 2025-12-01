@@ -23,7 +23,7 @@ import play.api.Configuration
 class AppConfig @Inject()(config: Configuration) {
 
   val appName: String = config.get[String]("appName")
-  
+
   val vatEnrolment: String = config.get[String]("features.enrolment.vat-enrolment-key")
   val vatEnrolmentIdentifierName: String = config.get[String]("features.enrolment.vat-enrolment-identifier-name")
   val intermediaryEnrolment: String = config.get[String]("features.enrolment.intermediary-enrolment-key")

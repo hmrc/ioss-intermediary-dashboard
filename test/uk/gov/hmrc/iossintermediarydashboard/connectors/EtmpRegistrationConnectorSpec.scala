@@ -7,20 +7,21 @@ import play.api.Application
 import play.api.http.Status.{GATEWAY_TIMEOUT, INTERNAL_SERVER_ERROR, OK}
 import play.api.libs.json.Json
 import play.api.test.Helpers.running
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpDisplayRegistration
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.{GatewayTimeout, InvalidJson, ServerError}
 
 class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
+  private implicit val hc: HeaderCarrier = new HeaderCarrier()
+
   private val etmpDisplayRegistration: EtmpDisplayRegistration = arbitraryEtmpDisplayRegistration.arbitrary.sample.value
 
   private def application: Application = applicationBuilder()
     .configure(
-      "microservice.services.display-registration.host" -> "127.0.0.1",
-      "microservice.services.display-registration.port" -> server.port,
-      "microservice.services.display-registration.authorizationToken" -> "auth-token",
-      "microservice.services.display-registration.environment" -> "test-environment"
+      "microservice.services.ioss-intermediary-registration.host" -> "127.0.0.1",
+      "microservice.services.ioss-intermediary-registration.port" -> server.port
     )
     .build()
 
@@ -28,7 +29,7 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
     ".getRegistration" - {
 
-      val url: String = s"/ioss-intermediary-registration-stub/vec/iossregistration/viewreg/v1/$intermediaryNumber"
+      val url: String = s"/ioss-intermediary-registration/get-registration/$intermediaryNumber"
 
       "must return  Right(EtmpDisplayRegistration) for a given intermediary number when the server returns OK with a valid payload" in {
 
@@ -36,7 +37,6 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(url))
-            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(OK)
               .withBody(expectedJsonResponse)
@@ -59,7 +59,6 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(url))
-            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(OK)
               .withBody(invalidJsonResponse)
@@ -77,7 +76,6 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(url))
-            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(INTERNAL_SERVER_ERROR)
             )
@@ -94,7 +92,6 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
         server.stubFor(
           get(urlEqualTo(url))
-            .withHeader("Authorization", equalTo("Bearer auth-token"))
             .willReturn(aResponse()
               .withStatus(GATEWAY_TIMEOUT)
               .withFixedDelay(21000)
