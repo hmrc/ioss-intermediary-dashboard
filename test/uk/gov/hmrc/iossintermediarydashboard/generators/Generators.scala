@@ -552,5 +552,23 @@ trait Generators {
       }
     }
   }
+  
+  implicit lazy val arbitraryPartialReturnPeriod: Arbitrary[PartialReturnPeriod] = {
+    Arbitrary {
+      for {
+        firstDay <- arbitraryDate.arbitrary
+        lastDay <- arbitraryDate.arbitrary
+        year <- arbitraryDate.arbitrary.map(_.getYear)
+        month <- arbitraryDate.arbitrary.map(_.getMonth)
+      } yield {
+        PartialReturnPeriod(
+          firstDay = firstDay,
+          lastDay = lastDay,
+          year = year,
+          month = month
+        )
+      }
+    }
+  }
 }
 

@@ -21,7 +21,6 @@ import play.api.libs.json.*
 
 import java.time.{LocalDate, Month}
 
-// TODO -> TEST
 case class PartialReturnPeriod(
                                 firstDay: LocalDate,
                                 lastDay: LocalDate,
