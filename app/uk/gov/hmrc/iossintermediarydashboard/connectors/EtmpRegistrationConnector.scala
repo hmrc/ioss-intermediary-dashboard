@@ -39,7 +39,7 @@ class EtmpRegistrationConnector @Inject()(
       .execute[EtmpDisplayRegistrationResponse]
       .recover {
         case e: HttpException =>
-          logger.error(s"There wss an error retrieving ???? with status ${e.responseCode} and body ${e.message}")
+          logger.error(s"There was an unexpected error retrieving ETMP Display Registration with status ${e.responseCode} and body ${e.message}")
           Left(GatewayTimeout)
       }
   }
