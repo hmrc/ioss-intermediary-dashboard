@@ -20,9 +20,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.scalacheck.Gen
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.{Seconds, Span}
-import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.running
+import play.api.{Application, inject}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
 import uk.gov.hmrc.iossintermediarydashboard.models.*
@@ -47,7 +47,7 @@ class GetVatInfoConnectorSpec extends BaseSpec with WireMockHelper {
   private val desUrl = s"/ioss-intermediary-dashboard-stub/vat/customer/vrn/${vrn.value}/information"
 
   "getVatCustomerInfo" - {
-
+    
     "must return a Right(VatCustomerInfo) when the server returns OK and a recognised payload" in {
 
       val app = application

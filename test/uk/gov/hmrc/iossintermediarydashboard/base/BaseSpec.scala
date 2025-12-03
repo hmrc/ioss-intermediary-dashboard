@@ -21,9 +21,11 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.{OptionValues, TryValues}
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.Vrn
+import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.{AuthAction, FakeAuthAction}
 import uk.gov.hmrc.iossintermediarydashboard.generators.Generators
 import uk.gov.hmrc.iossintermediarydashboard.models.DesAddress
 import uk.gov.hmrc.iossintermediarydashboard.models.des.VatCustomerInfo
@@ -44,11 +46,22 @@ trait BaseSpec
 
   val stubClock: Clock = Clock.fixed(LocalDate.now.atStartOfDay(ZoneId.systemDefault).toInstant, ZoneId.systemDefault)
 
-  protected def applicationBuilder(): GuiceApplicationBuilder =
+  protected def applicationBuilder(clock: Option[Clock] = None): GuiceApplicationBuilder = {
+
+    val clockToBind: Clock = clock.getOrElse(stubClock)
+    
     new GuiceApplicationBuilder()
+      .overrides(
+        bind[AuthAction].to[FakeAuthAction],
+        bind[Clock].toInstance(clockToBind)
+      )
+  }
 
   val userId: String = "12345-userId"
   val testCredentials: Credentials = Credentials(userId, "GGW")
+
+  val intermediaryNumber: String = "IN9001234567"
+  val iossNumber: String = "IM9001234567"
 
   val vatCustomerInfo: VatCustomerInfo =
     VatCustomerInfo(

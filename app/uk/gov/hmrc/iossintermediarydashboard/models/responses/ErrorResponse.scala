@@ -50,5 +50,7 @@ case object GatewayTimeout extends ErrorResponse {
 
 case class UnexpectedResponseStatus(status: Int, body: String) extends ErrorResponse
 
+case class EtmpObligationsError(code: String, body: String) extends ErrorResponse
+
 
 

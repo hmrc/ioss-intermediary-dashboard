@@ -1,4 +1,6 @@
 # microservice specific routes
 
-GET         /vat-information/:vrn                        uk.gov.hmrc.iossintermediarydashboard.controllers.VatInfoController.get(vrn: String)
+GET         /vat-information/:vrn                                 uk.gov.hmrc.iossintermediarydashboard.controllers.VatInfoController.get(vrn: String)
+
+GET         /vat-returns/current-returns/:intermediaryNumber      uk.gov.hmrc.iossintermediarydashboard.controllers.ReturnStatusController.getCurrentReturns(intermediaryNumber: String)
 
