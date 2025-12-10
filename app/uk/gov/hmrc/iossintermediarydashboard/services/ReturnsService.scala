@@ -17,7 +17,10 @@
 package uk.gov.hmrc.iossintermediarydashboard.services
 
 import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.Complete
-import uk.gov.hmrc.iossintermediarydashboard.models.{CurrentReturns, PeriodWithStatus, Return}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.Reversal
+import uk.gov.hmrc.iossintermediarydashboard.models.{CurrentReturns, Period, PeriodWithStatus, Return, SubmissionStatus}
+import uk.gov.hmrc.iossintermediarydashboard.models.Period.getPrevious
 
 import java.time.LocalDate
 import javax.inject.Inject
@@ -29,14 +32,15 @@ class ReturnsService @Inject(
 
   def getCurrentReturns(
                          intermediaryNumber: String,
-                         parsedCommencementDate: LocalDate
+                         parsedCommencementDate: LocalDate,
+                         exclusions: List[EtmpExclusion]
                        ): Future[Seq[CurrentReturns]] = {
     for {
-      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate)
-    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus)
+      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, exclusions)
+    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, exclusions)
   }
 
-  private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]]): Seq[CurrentReturns] = {
+  private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]], exclusions: List[EtmpExclusion]): Seq[CurrentReturns] = {
 
     periodsWithStatus.map {
       case (iossNumber, clientObligations) =>
@@ -68,11 +72,34 @@ class ReturnsService @Inject(
           )
         }
 
+        val finalReturnCompleted = hasSubmittedFinalReturn(exclusions, clientObligations)
+
         CurrentReturns(
           iossNumber = iossNumber,
           incompleteReturns = incompleteReturns,
-          completedReturns = completedReturns
+          completedReturns = completedReturns,
+          finalReturnsCompleted = finalReturnCompleted
         )
     }.toSeq
+  }
+
+  private def hasSubmittedFinalReturn(exclusions: List[EtmpExclusion], periodsWithStatus: Seq[PeriodWithStatus]): Boolean = {
+    exclusions.headOption.filterNot(_.exclusionReason == Reversal) match {
+      case Some(EtmpExclusion(_, _, effectiveDate, _)) =>
+        periodsWithStatus.exists {
+          periodWithStatus =>
+
+            val runningPeriod = Period.getRunningPeriod(effectiveDate)
+
+            val periodToCheck = if (runningPeriod.firstDay == effectiveDate) {
+              getPrevious(runningPeriod)
+            } else {
+              runningPeriod
+            }
+            periodWithStatus.period == periodToCheck &&
+              periodWithStatus.status == SubmissionStatus.Complete
+        }
+      case _ => false
+    }
   }
 }

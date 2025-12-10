@@ -14,18 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.iossintermediarydashboard.models
+package uk.gov.hmrc.iossintermediarydashboard.config
 
-import play.api.libs.json.{Json, OFormat}
-
-case class CurrentReturns(
-                           iossNumber: String,
-                           incompleteReturns: Seq[Return],
-                           completedReturns: Seq[Return],
-                           finalReturnsCompleted: Boolean,
-                         )
-
-object CurrentReturns {
-
-  implicit val format: OFormat[CurrentReturns] = Json.format[CurrentReturns]
+object Constants {
+  val excludedReturnAndPaymentExpiry: Int = 3
 }

@@ -24,6 +24,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
   private implicit lazy val ec: ExecutionContext = ExecutionContext.global
 
   private val mockEtmpObligationsConnector: EtmpObligationsConnector = mock[EtmpObligationsConnector]
+  private val mockCheckExclusionService: CheckExclusionsService = mock[CheckExclusionsService]
 
   private val etmpObligations: EtmpObligations = arbitraryEtmpObligations.arbitrary.sample.value
 
@@ -40,7 +41,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
     ".getPeriodsWithStatus" - {
 
-      val service: ObligationsService = new ObligationsService(mockEtmpObligationsConnector, stubClock)
+      val service: ObligationsService = new ObligationsService(mockEtmpObligationsConnector, mockCheckExclusionService, stubClock)
 
       "for each client" - {
 
@@ -96,7 +97,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
             when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
 
-            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
 
             val expectedList: Map[String, List[PeriodWithStatus]] = Map(
               iossNumber -> List(
@@ -169,7 +170,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
             when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(withUnfulfilledObligations).toFuture
 
-            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
 
             val expectedList: Map[String, List[PeriodWithStatus]] = Map(
               clientReferenceNumberB -> List(
@@ -210,7 +211,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -242,7 +243,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -277,7 +278,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -294,7 +295,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
     ".addNextIfAllCompleted" - {
 
-      val service: ObligationsService = new ObligationsService(mockEtmpObligationsConnector, stubClock)
+      val service: ObligationsService = new ObligationsService(mockEtmpObligationsConnector, mockCheckExclusionService, stubClock)
 
       "must return the current periods and the next period if all other listed periods are submission status complete" in {
 
@@ -383,7 +384,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
     ".getNextPeriod" - {
 
-      val service = new ObligationsService(mockEtmpObligationsConnector, stubClock)
+      val service = new ObligationsService(mockEtmpObligationsConnector, mockCheckExclusionService, stubClock)
 
       "must return the current period when the commencement date is on or before the last day of the current period" in {
 
@@ -439,7 +440,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
     ".getObligations" - {
 
-      val service = new ObligationsService(mockEtmpObligationsConnector, stubClock)
+      val service = new ObligationsService(mockEtmpObligationsConnector, mockCheckExclusionService, stubClock)
 
       "must return EtmpObligations when connector returns Right with a valid payload" in {
 

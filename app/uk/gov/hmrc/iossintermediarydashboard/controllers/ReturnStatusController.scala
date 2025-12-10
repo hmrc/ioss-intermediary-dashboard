@@ -37,8 +37,9 @@ class ReturnStatusController @Inject()(
     implicit request =>
 
       val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
+      val exclusions = request.registration.exclusions.toList
 
-      val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate)
+      val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, exclusions)
 
       for {
         currentReturns <- futureCurrentReturns
