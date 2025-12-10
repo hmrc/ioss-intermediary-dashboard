@@ -14,13 +14,15 @@ class CurrentReturnsSpec extends BaseSpec {
       val json = Json.obj(
         "iossNumber" -> currentReturns.iossNumber,
         "incompleteReturns" -> currentReturns.incompleteReturns,
-        "completedReturns" -> currentReturns.completedReturns
+        "completedReturns" -> currentReturns.completedReturns,
+        "finalReturnsCompleted" -> currentReturns.finalReturnsCompleted
       )
 
       val expectedResult = CurrentReturns(
         iossNumber = currentReturns.iossNumber,
         incompleteReturns = currentReturns.incompleteReturns,
-        completedReturns = currentReturns.completedReturns
+        completedReturns = currentReturns.completedReturns,
+        finalReturnsCompleted = currentReturns.finalReturnsCompleted
       )
 
       Json.toJson(expectedResult) `mustBe` json

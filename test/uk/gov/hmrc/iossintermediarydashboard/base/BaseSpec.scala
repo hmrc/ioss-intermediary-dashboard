@@ -30,7 +30,7 @@ import uk.gov.hmrc.iossintermediarydashboard.generators.Generators
 import uk.gov.hmrc.iossintermediarydashboard.models.DesAddress
 import uk.gov.hmrc.iossintermediarydashboard.models.des.VatCustomerInfo
 
-import java.time.{Clock, LocalDate, ZoneId}
+import java.time.{Clock, Instant, LocalDate, ZoneId}
 
 trait BaseSpec
   extends AnyFreeSpec
@@ -45,6 +45,8 @@ trait BaseSpec
   protected val vrn: Vrn = Vrn("123456789")
 
   val stubClock: Clock = Clock.fixed(LocalDate.now.atStartOfDay(ZoneId.systemDefault).toInstant, ZoneId.systemDefault)
+  val arbitraryInstant: Instant = arbitraryDate.arbitrary.sample.value.atStartOfDay(ZoneId.systemDefault).toInstant
+  val stubClockAtArbitraryDate: Clock = Clock.fixed(arbitraryInstant, ZoneId.systemDefault)
 
   protected def applicationBuilder(clock: Option[Clock] = None): GuiceApplicationBuilder = {
 
@@ -72,6 +74,8 @@ trait BaseSpec
       individualName = None,
       deregistrationDecisionDate = None
     )
+
+  val exclusion = List(arbitraryEtmpExclusion.arbitrary.sample.value)
 }
 
 

@@ -19,6 +19,7 @@ package uk.gov.hmrc.iossintermediarydashboard.services
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpObligationsConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getNext
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligations, EtmpObligationsQueryParameters}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 
@@ -28,6 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ObligationsService @Inject()(
                                     etmpObligationsConnector: EtmpObligationsConnector,
+                                    checkExclusionsService: CheckExclusionsService,
                                     clock: Clock
                                   ) {
 
@@ -35,7 +37,8 @@ class ObligationsService @Inject()(
 
   def getPeriodsWithStatus(
                             intermediaryNumber: String,
-                            commencementDate: LocalDate
+                            commencementDate: LocalDate,
+                            exclusions: List[EtmpExclusion]
                           )(implicit ec: ExecutionContext): Future[Map[String, Seq[PeriodWithStatus]]] = {
 
     val allPeriodsToDate: Seq[Period] = getAllPeriodsBetween(commencementDate, today)
@@ -55,7 +58,7 @@ class ObligationsService @Inject()(
           allObligationsForClient.flatMap { etmpObligation =>
 
             val allCurrentPeriodsForClient: List[PeriodWithStatus] = allPeriodsToDate.map { period =>
-              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods)
+              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods, exclusions)
             }.toList
 
             addNextIfAllCompleted(iossNumber, allCurrentPeriodsForClient, commencementDate)
@@ -109,9 +112,13 @@ class ObligationsService @Inject()(
     }
   }
 
-  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period]): PeriodWithStatus = {
+  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period], exclusions: List[EtmpExclusion]): PeriodWithStatus = {
     if (fulfilledPeriods.contains(period)) {
       PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)
+    } else if (checkExclusionsService.isPeriodExcluded(period, exclusions)) {
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Excluded)
+    } else if (checkExclusionsService.isPeriodExpired(period, exclusions)) {
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Expired)
     } else if (LocalDate.now(clock).isAfter(period.paymentDeadline)) {
       PeriodWithStatus(iossNumber, period, SubmissionStatus.Overdue)
     } else {

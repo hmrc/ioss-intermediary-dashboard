@@ -128,22 +128,24 @@ class ReturnsServiceSpec extends BaseSpec {
 
       "must return Seq[CurrentReturns] when obligations are retrieved for all intermediary clients" in {
 
-        when(mockObligationsService.getPeriodsWithStatus(any(), any())(any())) thenReturn mappedPeriodsWithStatus.toFuture
+        when(mockObligationsService.getPeriodsWithStatus(any(), any(), any())(any())) thenReturn mappedPeriodsWithStatus.toFuture
 
         val service = new ReturnsService(mockObligationsService)
 
-        val result = service.getCurrentReturns(intermediaryNumber, commencementDate).futureValue
+        val result = service.getCurrentReturns(intermediaryNumber, commencementDate, exclusion).futureValue
 
         val expectedResult: Seq[CurrentReturns] = Seq(
           CurrentReturns(
             iossNumber = iossNumber,
             incompleteReturns = incompleteReturns,
-            completedReturns = completeReturns
+            completedReturns = completeReturns,
+            finalReturnsCompleted = false
           ),
           CurrentReturns(
             iossNumber = iossNumber2,
             incompleteReturns = incompleteReturns,
-            completedReturns = completeReturns
+            completedReturns = completeReturns,
+            finalReturnsCompleted = false
           )
         )
 
@@ -157,22 +159,24 @@ class ReturnsServiceSpec extends BaseSpec {
           iossNumber2 -> Seq.empty
         )
 
-        when(mockObligationsService.getPeriodsWithStatus(any(), any())(any())) thenReturn emptyMappedPeriodsWithStatus.toFuture
+        when(mockObligationsService.getPeriodsWithStatus(any(), any(), any())(any())) thenReturn emptyMappedPeriodsWithStatus.toFuture
 
         val service = new ReturnsService(mockObligationsService)
 
-        val result = service.getCurrentReturns(intermediaryNumber, commencementDate).futureValue
+        val result = service.getCurrentReturns(intermediaryNumber, commencementDate, exclusion).futureValue
 
         val expectedResult: Seq[CurrentReturns] = Seq(
           CurrentReturns(
             iossNumber = iossNumber,
             incompleteReturns = Seq.empty,
-            completedReturns = Seq.empty
+            completedReturns = Seq.empty,
+            finalReturnsCompleted = false
           ),
           CurrentReturns(
             iossNumber = iossNumber2,
             incompleteReturns = Seq.empty,
-            completedReturns = Seq.empty
+            completedReturns = Seq.empty,
+            finalReturnsCompleted = false
           )
         )
 

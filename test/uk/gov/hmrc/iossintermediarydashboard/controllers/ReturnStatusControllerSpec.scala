@@ -24,7 +24,7 @@ class ReturnStatusControllerSpec extends BaseSpec {
 
       "must return OK with a Seq[CurrentReturns] payload when invoked" in {
 
-        when(mockReturnsService.getCurrentReturns(any(), any())) thenReturn currentReturns.toFuture
+        when(mockReturnsService.getCurrentReturns(any(), any(), any())) thenReturn currentReturns.toFuture
 
         val app = applicationBuilder()
           .overrides(bind[ReturnsService].toInstance(mockReturnsService))
@@ -42,7 +42,7 @@ class ReturnStatusControllerSpec extends BaseSpec {
 
       "must return an empty JSON array when there are no returns retrieved" in {
 
-        when(mockReturnsService.getCurrentReturns(any(), any())) thenReturn Seq.empty.toFuture
+        when(mockReturnsService.getCurrentReturns(any(), any(), any())) thenReturn Seq.empty.toFuture
 
         val app = applicationBuilder()
           .overrides(bind[ReturnsService].toInstance(mockReturnsService))
