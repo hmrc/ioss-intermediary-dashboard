@@ -1,7 +1,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.controllers
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
+import org.mockito.Mockito.{verifyNoInteractions, when}
 import org.scalacheck.Gen
 import play.api.inject.bind
 import play.api.libs.json.Json
@@ -57,6 +57,7 @@ class ReturnStatusControllerSpec extends BaseSpec {
           contentAsJson(result) `mustBe` Json.arr()
         }
       }
+      
     }
   }
 }

@@ -22,6 +22,7 @@ import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.DefaultAuthenti
 import uk.gov.hmrc.iossintermediarydashboard.models.CurrentReturns
 import uk.gov.hmrc.iossintermediarydashboard.services.ReturnsService
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
+import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.LocalDate
@@ -36,13 +37,18 @@ class ReturnStatusController @Inject()(
   def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.auth().async {
     implicit request =>
 
-      val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
-      val exclusions = request.registration.exclusions.toList
+      if(request.registration.clientDetails.isEmpty) {
+        val emptyCurrentReturns: Seq[CurrentReturns] = Seq.empty
+        Ok(Json.toJson(emptyCurrentReturns)).toFuture
+      } else {
+        val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
+        val exclusions = request.registration.exclusions.toList
 
-      val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, exclusions)
+        val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, exclusions)
 
-      for {
-        currentReturns <- futureCurrentReturns
-      } yield Ok(Json.toJson(currentReturns))
+        for {
+          currentReturns <- futureCurrentReturns
+        } yield Ok(Json.toJson(currentReturns))
+      }
   }
 }
