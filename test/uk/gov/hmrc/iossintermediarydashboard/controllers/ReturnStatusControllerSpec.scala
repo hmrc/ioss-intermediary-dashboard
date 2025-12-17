@@ -1,7 +1,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.controllers
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
+import org.mockito.Mockito.{verifyNoInteractions, when}
 import org.scalacheck.Gen
 import play.api.inject.bind
 import play.api.libs.json.Json
@@ -57,6 +57,25 @@ class ReturnStatusControllerSpec extends BaseSpec {
           contentAsJson(result) `mustBe` Json.arr()
         }
       }
+      
+      /* TODO work out how to get the action to respond with custom registration
+      "must return an empty JSON array when the intermediary has no clients" in {
+
+        val app = applicationBuilder()
+          .overrides(bind[ReturnsService].toInstance(mockReturnsService))
+          .build()
+
+        running(app) {
+
+          val request = FakeRequest(GET, routes.ReturnStatusController.getCurrentReturns(intermediaryNumber).url)
+          val result = route(app, request).value
+
+          status(result) `mustBe` OK
+          contentAsJson(result) `mustBe` Json.arr()
+        }
+        
+        verifyNoInteractions(mockReturnsService)
+      }*/
     }
   }
 }
