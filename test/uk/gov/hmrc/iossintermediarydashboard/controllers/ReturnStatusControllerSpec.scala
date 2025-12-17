@@ -58,24 +58,6 @@ class ReturnStatusControllerSpec extends BaseSpec {
         }
       }
       
-      /* TODO work out how to get the action to respond with custom registration
-      "must return an empty JSON array when the intermediary has no clients" in {
-
-        val app = applicationBuilder()
-          .overrides(bind[ReturnsService].toInstance(mockReturnsService))
-          .build()
-
-        running(app) {
-
-          val request = FakeRequest(GET, routes.ReturnStatusController.getCurrentReturns(intermediaryNumber).url)
-          val result = route(app, request).value
-
-          status(result) `mustBe` OK
-          contentAsJson(result) `mustBe` Json.arr()
-        }
-        
-        verifyNoInteractions(mockReturnsService)
-      }*/
     }
   }
 }
