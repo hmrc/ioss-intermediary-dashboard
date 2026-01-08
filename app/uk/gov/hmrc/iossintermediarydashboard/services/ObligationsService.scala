@@ -55,9 +55,9 @@ class ObligationsService @Inject()(
 
       etmpObligations.obligations.groupBy(_.identification.referenceNumber).toList.collect {
         (iossNumber, allObligationsForClient) =>
-          val clientExcluded: Boolean = 
-            clientDetailsForExclusion.find(_.clientIossID == iossNumber) match
-            case Some(value) if value.clientExcluded => true
+
+          val clientExcluded: Boolean = clientDetailsForExclusion.find(_.clientIossID == iossNumber) match
+            case Some(value) => value.clientExcluded
             case None => false
 
           allObligationsForClient.flatMap { etmpObligation =>
@@ -118,17 +118,17 @@ class ObligationsService @Inject()(
   }
 
   private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period], clientExcluded: Boolean): PeriodWithStatus = {
-    
+
     if (fulfilledPeriods.contains(period)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)             //TODO SCG - NOTE - Anything fulfilled is completed
     } else if (checkExclusionsService.isPeriodExpired(period, clientExcluded)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Expired)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Expired)              //TODO SCG - NOTE - Anything not fulfilled, OLDER than 3 years, And the client is Excluded is Expired
     } else if (checkExclusionsService.isPeriodExcluded(period, clientExcluded)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Excluded)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Excluded)             //TODO SCG - NOTE - Anything not fulfilled, YOUNGER than 3 years, And the client is Excluded is Excluded
     } else if (LocalDate.now(clock).isAfter(period.paymentDeadline)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Overdue)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Overdue)              //TODO SCG - NOTE - Anything not fulfilled, and the payment date is OLDER than TODAY is Overdue
     } else {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Due)
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Due)                  //TODO SCG - NOTE - Anything not fulfilled, and the payment date is Younger than TODAY is Due
     }
   }
 }

@@ -85,7 +85,7 @@ class ReturnsService @Inject(
   }
 
   private def hasSubmittedFinalReturn(exclusions: List[EtmpExclusion], periodsWithStatus: Seq[PeriodWithStatus]): Boolean = {
-    exclusions.headOption.filterNot(_.exclusionReason == Reversal) match {
+    exclusions.headOption.filterNot(_.exclusionReason == Reversal) match { // TODO SCG Check how we want to address this as using the exclusions from Intermediary not client
       case Some(EtmpExclusion(_, _, effectiveDate, _)) =>
         periodsWithStatus.exists {
           periodWithStatus =>
