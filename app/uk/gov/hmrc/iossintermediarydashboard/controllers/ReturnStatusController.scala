@@ -38,13 +38,14 @@ class ReturnStatusController @Inject()(
     implicit request =>
 
       if(request.registration.clientDetails.isEmpty) {
-        val emptyCurrentReturns: Seq[CurrentReturns] = Seq.empty
+        val emptyCurrentReturns: Seq[CurrentReturns] = Seq.empty // TODO -SCG- Note If no NETP (clients) returns empty
         Ok(Json.toJson(emptyCurrentReturns)).toFuture
       } else {
         val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
-        val exclusions = request.registration.exclusions.toList
+        val exclusions = request.registration.exclusions.toList  //TODO -SCG- Note - Exclusions for the intermediary not the client
+        val clientExclusions = request.registration.clientDetails //TODO -SCG- Note - Exclusions for the client but not the reason (AC- if an exclusion is reversed, then the above rules don't apply)
 
-        val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, exclusions)
+        val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, exclusions, clientExclusions)
 
         for {
           currentReturns <- futureCurrentReturns

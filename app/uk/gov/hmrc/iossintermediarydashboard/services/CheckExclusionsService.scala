@@ -18,7 +18,7 @@ package uk.gov.hmrc.iossintermediarydashboard.services
 
 import uk.gov.hmrc.iossintermediarydashboard.config.Constants.excludedReturnAndPaymentExpiry
 import uk.gov.hmrc.iossintermediarydashboard.models.Period
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpClientDetails, EtmpExclusion}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.Reversal
 
 import java.time.{Clock, LocalDate}
@@ -30,28 +30,18 @@ class CheckExclusionsService @Inject()(clock: Clock) {
     val today = LocalDate.now(clock)
     today.isAfter(dueDate.plusYears(excludedReturnAndPaymentExpiry))
   }
+  
+  def isPeriodExcluded(period: Period, isClientExcluded: Boolean): Boolean = {
 
-  def getLastExclusionWithoutReversal(exclusions: List[EtmpExclusion]): Option[EtmpExclusion] = {
-    // Even though API is array ETMP only return single item
-    exclusions.headOption.filterNot(_.exclusionReason == Reversal)
-  }
-
-  def isPeriodExcluded(period: Period, exclusions: List[EtmpExclusion]): Boolean = {
-    val excluded = getLastExclusionWithoutReversal(exclusions)
-
-    excluded match {
-      case Some(excluded) if excluded.exclusionReason != Reversal &&
-        (excluded.effectiveDate.isBefore(period.firstDay) || excluded.effectiveDate == period.firstDay) => true
-      case _ => false
+    isClientExcluded match {
+      case true => !hasActiveWindowExpired(period.paymentDeadline)
+      case false =>  false
     }
   }
 
-  def isPeriodExpired(period: Period, exclusions: List[EtmpExclusion]): Boolean = {
-    val excluded = getLastExclusionWithoutReversal(exclusions)
-
-    excluded match {
-      case Some(excluded) if excluded.exclusionReason != Reversal && hasActiveWindowExpired(period.paymentDeadline) => true
-      case _ => false
-    }
+  def isPeriodExpired(period: Period, isClientExcluded: Boolean): Boolean = {
+    isClientExcluded match
+      case true => hasActiveWindowExpired(period.paymentDeadline)
+      case false => false
   }
 }

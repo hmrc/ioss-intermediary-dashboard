@@ -17,7 +17,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.services
 
 import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.Complete
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpClientDetails, EtmpExclusion}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.Reversal
 import uk.gov.hmrc.iossintermediarydashboard.models.{CurrentReturns, Period, PeriodWithStatus, Return, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getPrevious
@@ -33,11 +33,12 @@ class ReturnsService @Inject(
   def getCurrentReturns(
                          intermediaryNumber: String,
                          parsedCommencementDate: LocalDate,
-                         exclusions: List[EtmpExclusion]
+                         exclusions: List[EtmpExclusion],
+                         clientDetailsForExclusion: Seq[EtmpClientDetails]
                        ): Future[Seq[CurrentReturns]] = {
     for {
-      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, exclusions)
-    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, exclusions)
+      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, clientDetailsForExclusion)
+    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, exclusions) // TODO SCG- Note - This exclusion is for the Intermediary not the client
   }
 
   private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]], exclusions: List[EtmpExclusion]): Seq[CurrentReturns] = {
@@ -72,7 +73,7 @@ class ReturnsService @Inject(
           )
         }
 
-        val finalReturnCompleted = hasSubmittedFinalReturn(exclusions, clientObligations)
+        val finalReturnCompleted = hasSubmittedFinalReturn(exclusions, clientObligations) // TODO SCG- Note - This exclusion is for the Intermediary not the client how does this impact final returns?
 
         CurrentReturns(
           iossNumber = iossNumber,
