@@ -19,7 +19,7 @@ package uk.gov.hmrc.iossintermediarydashboard.services
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpObligationsConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getNext
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligations, EtmpObligationsQueryParameters}
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpClientDetails, EtmpExclusion}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 
@@ -38,7 +38,7 @@ class ObligationsService @Inject()(
   def getPeriodsWithStatus(
                             intermediaryNumber: String,
                             commencementDate: LocalDate,
-                            clientDetailsForExclusion: Seq[EtmpClientDetails]
+                            clientExclusions: Map[String, Seq[EtmpExclusion]]
                           )(implicit ec: ExecutionContext): Future[Map[String, Seq[PeriodWithStatus]]] = {
 
     val allPeriodsToDate: Seq[Period] = getAllPeriodsBetween(commencementDate, today)
@@ -55,15 +55,14 @@ class ObligationsService @Inject()(
 
       etmpObligations.obligations.groupBy(_.identification.referenceNumber).toList.collect {
         (iossNumber, allObligationsForClient) =>
-
-          val clientExcluded: Boolean = clientDetailsForExclusion.find(_.clientIossID == iossNumber) match
-            case Some(value) => value.clientExcluded
-            case None => false
-
           allObligationsForClient.flatMap { etmpObligation =>
 
+            val exclusionsForIossNum: Seq[EtmpExclusion]  = clientExclusions.get(iossNumber) match
+              case Some(clientExclusionList) => clientExclusionList
+              case None => List.empty
+
             val allCurrentPeriodsForClient: List[PeriodWithStatus] = allPeriodsToDate.map { period =>
-              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods, clientExcluded)
+              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods, exclusionsForIossNum)
             }.toList
 
             addNextIfAllCompleted(iossNumber, allCurrentPeriodsForClient, commencementDate)
@@ -117,18 +116,17 @@ class ObligationsService @Inject()(
     }
   }
 
-  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period], clientExcluded: Boolean): PeriodWithStatus = {
-
+  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period], exclusions: Seq[EtmpExclusion]): PeriodWithStatus = {
     if (fulfilledPeriods.contains(period)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)             //TODO SCG - NOTE - Anything fulfilled is completed
-    } else if (checkExclusionsService.isPeriodExpired(period, clientExcluded)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Expired)              //TODO SCG - NOTE - Anything not fulfilled, OLDER than 3 years, And the client is Excluded is Expired
-    } else if (checkExclusionsService.isPeriodExcluded(period, clientExcluded)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Excluded)             //TODO SCG - NOTE - Anything not fulfilled, YOUNGER than 3 years, And the client is Excluded is Excluded
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)
+    } else if (checkExclusionsService.isPeriodExcluded(period, exclusions)) {
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Excluded)
+    } else if (checkExclusionsService.isPeriodExpired(period, exclusions)) {
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Expired)
     } else if (LocalDate.now(clock).isAfter(period.paymentDeadline)) {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Overdue)              //TODO SCG - NOTE - Anything not fulfilled, and the payment date is OLDER than TODAY is Overdue
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Overdue)
     } else {
-      PeriodWithStatus(iossNumber, period, SubmissionStatus.Due)                  //TODO SCG - NOTE - Anything not fulfilled, and the payment date is Younger than TODAY is Due
+      PeriodWithStatus(iossNumber, period, SubmissionStatus.Due)
     }
   }
 }

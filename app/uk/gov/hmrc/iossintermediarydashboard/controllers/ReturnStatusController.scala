@@ -18,8 +18,10 @@ package uk.gov.hmrc.iossintermediarydashboard.controllers
 
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
+import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationConnector
 import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.DefaultAuthenticatedControllerComponents
 import uk.gov.hmrc.iossintermediarydashboard.models.CurrentReturns
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
 import uk.gov.hmrc.iossintermediarydashboard.services.ReturnsService
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -31,21 +33,31 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ReturnStatusController @Inject()(
                                         cc: DefaultAuthenticatedControllerComponents,
-                                        returnsService: ReturnsService
+                                        returnsService: ReturnsService,
+                                        etmpRegistrationConnector: EtmpRegistrationConnector
                                       )(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.auth().async {
     implicit request =>
 
-      if(request.registration.clientDetails.isEmpty) {
+      if (request.registration.clientDetails.isEmpty) {
         val emptyCurrentReturns: Seq[CurrentReturns] = Seq.empty // TODO -SCG- Note If no NETP (clients) returns empty
         Ok(Json.toJson(emptyCurrentReturns)).toFuture
       } else {
         val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
-        val exclusions = request.registration.exclusions.toList  //TODO -SCG- Note - Exclusions for the intermediary not the client
-        val clientExclusions = request.registration.clientDetails //TODO -SCG- Note - Exclusions for the client but not the reason (AC- if an exclusion is reversed, then the above rules don't apply)
-
-        val futureCurrentReturns: Future[Seq[CurrentReturns]] = returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, exclusions, clientExclusions)
+        val exclusionPerClient: Future[Map[String, Seq[EtmpExclusion]]] =
+          Future.sequence {
+            request.registration.clientDetails.map { clientDetails =>
+              etmpRegistrationConnector.getRegistration(clientDetails.clientIossID).map {
+                case Right(clientEtmpDisplayRegistration) => (clientDetails.clientIossID, clientEtmpDisplayRegistration.exclusions)
+                case Left(error) => ??? //TODO -> Error retrieving the registration
+              }
+            }
+          }.map(_.toMap)
+        
+        val futureCurrentReturns: Future[Seq[CurrentReturns]] = exclusionPerClient.flatMap { clientExclusions =>
+          returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, clientExclusions)
+        }
 
         for {
           currentReturns <- futureCurrentReturns

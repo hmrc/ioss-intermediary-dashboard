@@ -33,15 +33,14 @@ class ReturnsService @Inject(
   def getCurrentReturns(
                          intermediaryNumber: String,
                          parsedCommencementDate: LocalDate,
-                         exclusions: List[EtmpExclusion],
-                         clientDetailsForExclusion: Seq[EtmpClientDetails]
+                         clientExclusions: Map[String, Seq[EtmpExclusion]]
                        ): Future[Seq[CurrentReturns]] = {
     for {
-      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, clientDetailsForExclusion)
-    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, exclusions) // TODO SCG- Note - This exclusion is for the Intermediary not the client
+      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, clientExclusions)
+    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, clientExclusions)
   }
 
-  private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]], exclusions: List[EtmpExclusion]): Seq[CurrentReturns] = {
+  private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]], clientExclusions: Map[String, Seq[EtmpExclusion]]): Seq[CurrentReturns] = {
 
     periodsWithStatus.map {
       case (iossNumber, clientObligations) =>
@@ -73,7 +72,12 @@ class ReturnsService @Inject(
           )
         }
 
-        val finalReturnCompleted = hasSubmittedFinalReturn(exclusions, clientObligations) // TODO SCG- Note - This exclusion is for the Intermediary not the client how does this impact final returns?
+        val exclusionsForThisClient: Seq[EtmpExclusion] = clientExclusions.get(iossNumber) match
+          case Some(clientExclusionList) => clientExclusionList
+          case None => List.empty
+
+
+        val finalReturnCompleted = hasSubmittedFinalReturn(exclusionsForThisClient, clientObligations) // TODO SCG- Note - This exclusion is for the Intermediary not the client how does this impact final returns?
 
         CurrentReturns(
           iossNumber = iossNumber,
@@ -84,7 +88,9 @@ class ReturnsService @Inject(
     }.toSeq
   }
 
-  private def hasSubmittedFinalReturn(exclusions: List[EtmpExclusion], periodsWithStatus: Seq[PeriodWithStatus]): Boolean = {
+  private def hasSubmittedFinalReturn(exclusions: Seq[EtmpExclusion], periodsWithStatus: Seq[PeriodWithStatus]): Boolean = {
+
+
     exclusions.headOption.filterNot(_.exclusionReason == Reversal) match { // TODO SCG Check how we want to address this as using the exclusions from Intermediary not client
       case Some(EtmpExclusion(_, _, effectiveDate, _)) =>
         periodsWithStatus.exists {
