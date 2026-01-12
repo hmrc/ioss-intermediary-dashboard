@@ -20,8 +20,10 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationConnector
 import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.DefaultAuthenticatedControllerComponents
+import uk.gov.hmrc.iossintermediarydashboard.logging.Logging
 import uk.gov.hmrc.iossintermediarydashboard.models.CurrentReturns
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
+import uk.gov.hmrc.iossintermediarydashboard.models.responses.ErrorResponse
 import uk.gov.hmrc.iossintermediarydashboard.services.ReturnsService
 import uk.gov.hmrc.iossintermediarydashboard.utils.Formatters.etmpDateFormatter
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -35,26 +37,31 @@ class ReturnStatusController @Inject()(
                                         cc: DefaultAuthenticatedControllerComponents,
                                         returnsService: ReturnsService,
                                         etmpRegistrationConnector: EtmpRegistrationConnector
-                                      )(implicit ec: ExecutionContext) extends BackendController(cc) {
+                                      )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.auth().async {
     implicit request =>
 
       if (request.registration.clientDetails.isEmpty) {
-        val emptyCurrentReturns: Seq[CurrentReturns] = Seq.empty // TODO -SCG- Note If no NETP (clients) returns empty
+        val emptyCurrentReturns: Seq[CurrentReturns] = Seq.empty
         Ok(Json.toJson(emptyCurrentReturns)).toFuture
       } else {
         val parsedCommencementDate: LocalDate = LocalDate.parse(request.registration.schemeDetails.commencementDate, etmpDateFormatter)
-        val exclusionPerClient: Future[Map[String, Seq[EtmpExclusion]]] =
+        val exclusionPerClient: Future[Map[String, Seq[EtmpExclusion]]] = {
           Future.sequence {
             request.registration.clientDetails.map { clientDetails =>
               etmpRegistrationConnector.getRegistration(clientDetails.clientIossID).map {
                 case Right(clientEtmpDisplayRegistration) => (clientDetails.clientIossID, clientEtmpDisplayRegistration.exclusions)
-                case Left(error) => ??? //TODO -> Error retrieving the registration
+                case Left(error: ErrorResponse) =>
+                  val message: String = s"Received an unexpected error when trying to retrieve EtmpDisplayRegistration for clients. Errors: ${error.body}."
+                  val exception: Exception = new Exception(message)
+                  logger.error(message, exception)
+                  throw exception
               }
             }
           }.map(_.toMap)
-        
+        }
+
         val futureCurrentReturns: Future[Seq[CurrentReturns]] = exclusionPerClient.flatMap { clientExclusions =>
           returnsService.getCurrentReturns(intermediaryNumber, parsedCommencementDate, clientExclusions)
         }
