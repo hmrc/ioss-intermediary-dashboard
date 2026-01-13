@@ -43,4 +43,6 @@ class EtmpRegistrationConnector @Inject()(
           Left(GatewayTimeout)
       }
   }
+  //TODO - SCG - Create another get method for Ioss (route through iossNetpReg backEnd to DisplayReg
+  // available nums for testing: IN9004004004 / IM9004004004
 }

@@ -50,6 +50,7 @@ class ReturnStatusController @Inject()(
         val exclusionPerClient: Future[Map[String, Seq[EtmpExclusion]]] = {
           Future.sequence {
             request.registration.clientDetails.map { clientDetails =>
+              //TODO- SCG- Only gather the exclusions if the client is excluded to reduce API calls
               etmpRegistrationConnector.getRegistration(clientDetails.clientIossID).map {
                 case Right(clientEtmpDisplayRegistration) => (clientDetails.clientIossID, clientEtmpDisplayRegistration.exclusions)
                 case Left(error: ErrorResponse) =>

@@ -12,6 +12,8 @@ import uk.gov.hmrc.iossintermediarydashboard.models.Period.{getNext, getRunningP
 import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.{Complete, Due, Next, Overdue}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.EtmpObligationsFulfilmentStatus.{Fulfilled, Open}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligation, EtmpObligationDetails, EtmpObligationIdentification, EtmpObligations, EtmpObligationsQueryParameters}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpExclusion, EtmpExclusionReason}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.FailsToComply
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.EtmpObligationsError
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -35,6 +37,24 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
   override def beforeEach(): Unit = {
     Mockito.reset(mockEtmpObligationsConnector)
+  }
+
+  val excludedExclusion: EtmpExclusion =        
+    EtmpExclusion(
+    exclusionReason = EtmpExclusionReason.TransferringMSID,
+    effectiveDate = LocalDate.of(2025,7,1),
+    decisionDate = LocalDate.of(2025,7,1),
+    quarantine = true
+  )
+
+  private def createClientExceptions(clientIds: Seq[String]): Map[String, Seq[EtmpExclusion]] = {
+    if(clientIds.isEmpty) {
+      Map.empty
+    } else {
+      clientIds.map { clientId =>
+        clientId -> Seq(excludedExclusion)
+      }.toMap
+    }
   }
 
   "ObligationsService" - {
@@ -97,7 +117,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
             when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
 
-            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, clientReferenceNumberB))).futureValue
 
             val expectedList: Map[String, List[PeriodWithStatus]] = Map(
               iossNumber -> List(
@@ -170,7 +190,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
             when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(withUnfulfilledObligations).toFuture
 
-            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, clientReferenceNumberB))).futureValue
 
             val expectedList: Map[String, List[PeriodWithStatus]] = Map(
               clientReferenceNumberB -> List(
@@ -211,7 +231,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber))).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -243,7 +263,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber))).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -278,7 +298,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber))).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(

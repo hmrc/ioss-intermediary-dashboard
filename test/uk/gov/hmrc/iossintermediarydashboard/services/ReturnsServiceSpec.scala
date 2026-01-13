@@ -6,6 +6,7 @@ import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
 import uk.gov.hmrc.iossintermediarydashboard.models.*
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getNext
 import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.{Complete, Due, Overdue}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
 
 import java.time.LocalDate
@@ -122,6 +123,16 @@ class ReturnsServiceSpec extends BaseSpec {
     )
   )
 
+  private def createClientExceptions(clientIds: Seq[String]): Map[String, Seq[EtmpExclusion]] = {
+    if (clientIds.isEmpty) {
+      Map.empty
+    } else {
+      clientIds.map { clientId =>
+        clientId -> exclusion
+      }.toMap
+    }
+  }
+
   "ReturnsService" - {
 
     ".getCurrentReturns" - {
@@ -132,7 +143,7 @@ class ReturnsServiceSpec extends BaseSpec {
 
         val service = new ReturnsService(mockObligationsService)
 
-        val result = service.getCurrentReturns(intermediaryNumber, commencementDate, exclusion).futureValue
+        val result = service.getCurrentReturns(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, iossNumber2))).futureValue
 
         val expectedResult: Seq[CurrentReturns] = Seq(
           CurrentReturns(
@@ -163,7 +174,7 @@ class ReturnsServiceSpec extends BaseSpec {
 
         val service = new ReturnsService(mockObligationsService)
 
-        val result = service.getCurrentReturns(intermediaryNumber, commencementDate, exclusion).futureValue
+        val result = service.getCurrentReturns(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, iossNumber2))).futureValue
 
         val expectedResult: Seq[CurrentReturns] = Seq(
           CurrentReturns(
