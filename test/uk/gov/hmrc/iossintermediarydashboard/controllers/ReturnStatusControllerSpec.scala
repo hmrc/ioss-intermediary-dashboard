@@ -8,6 +8,7 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
+import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.CurrentReturns
 import uk.gov.hmrc.iossintermediarydashboard.services.ReturnsService
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -15,6 +16,8 @@ import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
 class ReturnStatusControllerSpec extends BaseSpec {
 
   private val mockReturnsService: ReturnsService = mock[ReturnsService]
+  private val mockEtmpRegistrationConnector: EtmpRegistrationConnector = mock[EtmpRegistrationConnector]
+
 
   private val currentReturns: Seq[CurrentReturns] = Gen.listOfN(3, arbitraryCurrentReturns.arbitrary).sample.value
 
@@ -25,9 +28,13 @@ class ReturnStatusControllerSpec extends BaseSpec {
       "must return OK with a Seq[CurrentReturns] payload when invoked" in {
 
         when(mockReturnsService.getCurrentReturns(any(), any(), any())) thenReturn currentReturns.toFuture
+        when(mockEtmpRegistrationConnector.getIossNetpRegistration(any())(any())) thenReturn Right(arbitraryEtmpDisplayRegistration.arbitrary.sample.value).toFuture
 
         val app = applicationBuilder()
-          .overrides(bind[ReturnsService].toInstance(mockReturnsService))
+          .overrides(
+            bind[ReturnsService].toInstance(mockReturnsService),
+            bind[EtmpRegistrationConnector].toInstance(mockEtmpRegistrationConnector)
+          )
           .build()
 
         running(app) {
@@ -43,9 +50,12 @@ class ReturnStatusControllerSpec extends BaseSpec {
       "must return an empty JSON array when there are no returns retrieved" in {
 
         when(mockReturnsService.getCurrentReturns(any(), any(), any())) thenReturn Seq.empty.toFuture
+        when(mockEtmpRegistrationConnector.getIossNetpRegistration(any())(any())) thenReturn Right(arbitraryEtmpDisplayRegistration.arbitrary.sample.value).toFuture
 
         val app = applicationBuilder()
-          .overrides(bind[ReturnsService].toInstance(mockReturnsService))
+          .overrides(bind[ReturnsService].toInstance(mockReturnsService),
+            bind[EtmpRegistrationConnector].toInstance(mockEtmpRegistrationConnector)
+          )
           .build()
 
         running(app) {

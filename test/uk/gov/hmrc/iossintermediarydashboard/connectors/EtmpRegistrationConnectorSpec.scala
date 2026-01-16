@@ -18,10 +18,17 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
   private val etmpDisplayRegistration: EtmpDisplayRegistration = arbitraryEtmpDisplayRegistration.arbitrary.sample.value
 
-  private def application: Application = applicationBuilder()
+  private def intermediaryApplication: Application = applicationBuilder()
     .configure(
       "microservice.services.ioss-intermediary-registration.host" -> "127.0.0.1",
       "microservice.services.ioss-intermediary-registration.port" -> server.port
+    )
+    .build()
+
+  private def netpApplication: Application = applicationBuilder()
+    .configure(
+      "microservice.services.ioss-netp-registration.host" -> "127.0.0.1",
+      "microservice.services.ioss-netp-registration.port" -> server.port,
     )
     .build()
 
@@ -43,9 +50,9 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
             )
         )
 
-        running(application) {
+        running(intermediaryApplication) {
 
-          val connector = application.injector.instanceOf[EtmpRegistrationConnector]
+          val connector = intermediaryApplication.injector.instanceOf[EtmpRegistrationConnector]
 
           val result = connector.getRegistration(intermediaryNumber).futureValue
 
@@ -65,7 +72,7 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
             )
         )
 
-        val connector = application.injector.instanceOf[EtmpRegistrationConnector]
+        val connector = intermediaryApplication.injector.instanceOf[EtmpRegistrationConnector]
 
         val result = connector.getRegistration(intermediaryNumber).futureValue
 
@@ -81,7 +88,7 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
             )
         )
 
-        val connector = application.injector.instanceOf[EtmpRegistrationConnector]
+        val connector = intermediaryApplication.injector.instanceOf[EtmpRegistrationConnector]
 
         val result = connector.getRegistration(intermediaryNumber).futureValue
 
@@ -98,11 +105,95 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
             )
         )
 
-        running(application) {
+        running(intermediaryApplication) {
 
-          val connector = application.injector.instanceOf[EtmpRegistrationConnector]
+          val connector = intermediaryApplication.injector.instanceOf[EtmpRegistrationConnector]
 
           val result = connector.getRegistration(intermediaryNumber)
+
+          whenReady(result, Timeout(Span(30, Seconds))) { exp =>
+            exp `mustBe` Left(GatewayTimeout)
+          }
+        }
+      }
+    }
+    
+    ".getIossNetpRegistration" - {
+
+      val url: String = s"/ioss-netp-registration/registrations/$iossNumber"
+
+      "must return  Right(EtmpDisplayRegistration) for a given ioss number when the server returns OK with a valid payload" in {
+
+        val expectedJsonResponse: String = s"""{"etmpDisplayRegistration": ${Json.toJson(etmpDisplayRegistration)}}"""
+
+        server.stubFor(
+          get(urlEqualTo(url))
+            .willReturn(aResponse()
+              .withStatus(OK)
+              .withBody(expectedJsonResponse)
+            )
+        )
+
+        running(netpApplication) {
+
+          val connector = netpApplication.injector.instanceOf[EtmpRegistrationConnector]
+
+          val result = connector.getIossNetpRegistration(iossNumber).futureValue
+
+          result `mustBe` Right(etmpDisplayRegistration)
+        }
+      }
+
+      "must return Left(InvalidJson) when the server returns OK but is unable to parse the JSON correctly" in {
+
+        val invalidJsonResponse: String = """{"INVALID": "ERROR"}"""
+
+        server.stubFor(
+          get(urlEqualTo(url))
+            .willReturn(aResponse()
+              .withStatus(OK)
+              .withBody(invalidJsonResponse)
+            )
+        )
+
+        val connector = netpApplication.injector.instanceOf[EtmpRegistrationConnector]
+
+        val result = connector.getIossNetpRegistration(iossNumber).futureValue
+
+        result `mustBe` Left(InvalidJson)
+      }
+
+      "must return Left(ServerError) when the server returns an error" in {
+
+        server.stubFor(
+          get(urlEqualTo(url))
+            .willReturn(aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+            )
+        )
+
+        val connector = netpApplication.injector.instanceOf[EtmpRegistrationConnector]
+
+        val result = connector.getIossNetpRegistration(iossNumber).futureValue
+
+        result `mustBe` Left(ServerError)
+      }
+
+      "must return Left(GatewayTimeout) when a HTTP exception is thrown" in {
+
+        server.stubFor(
+          get(urlEqualTo(url))
+            .willReturn(aResponse()
+              .withStatus(GATEWAY_TIMEOUT)
+              .withFixedDelay(21000)
+            )
+        )
+
+        running(netpApplication) {
+
+          val connector = netpApplication.injector.instanceOf[EtmpRegistrationConnector]
+
+          val result = connector.getIossNetpRegistration(iossNumber)
 
           whenReady(result, Timeout(Span(30, Seconds))) { exp =>
             exp `mustBe` Left(GatewayTimeout)

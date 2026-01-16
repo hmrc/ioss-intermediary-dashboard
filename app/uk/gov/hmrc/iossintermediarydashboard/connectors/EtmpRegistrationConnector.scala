@@ -32,6 +32,8 @@ class EtmpRegistrationConnector @Inject()(
                                          )(implicit ec: ExecutionContext) extends Logging {
 
   private val displayRegistrationUrl: Service = config.get[Service]("microservice.services.ioss-intermediary-registration")
+  private val iossRegistrationUrl: Service = config.get[Service]("microservice.services.ioss-netp-registration")
+
 
   def getRegistration(intermediaryNumber: String)(implicit hc: HeaderCarrier): Future[EtmpDisplayRegistrationResponse] = {
 
@@ -43,6 +45,14 @@ class EtmpRegistrationConnector @Inject()(
           Left(GatewayTimeout)
       }
   }
-  //TODO - SCG - Create another get method for Ioss (route through iossNetpReg backEnd to DisplayReg
-  // available nums for testing: IN9004004004 / IM9004004004
+  
+  def getIossNetpRegistration(iossNumber: String)(implicit hc: HeaderCarrier): Future[EtmpDisplayRegistrationResponse] = {
+    httpClientV2.get(url"${iossRegistrationUrl}/registrations/$iossNumber")
+      .execute[EtmpDisplayRegistrationResponse]
+      .recover {
+        case e: HttpException =>
+          logger.error(s"There was an unexpected error retrieving ETMP Display Registration with status ${e.responseCode} and body ${e.message}")
+          Left(GatewayTimeout)
+      }
+  }
 }

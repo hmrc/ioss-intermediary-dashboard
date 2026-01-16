@@ -50,14 +50,17 @@ class ReturnStatusController @Inject()(
         val exclusionPerClient: Future[Map[String, Seq[EtmpExclusion]]] = {
           Future.sequence {
             request.registration.clientDetails.map { clientDetails =>
-              //TODO- SCG- Only gather the exclusions if the client is excluded to reduce API calls
-              etmpRegistrationConnector.getRegistration(clientDetails.clientIossID).map {
-                case Right(clientEtmpDisplayRegistration) => (clientDetails.clientIossID, clientEtmpDisplayRegistration.exclusions)
-                case Left(error: ErrorResponse) =>
-                  val message: String = s"Received an unexpected error when trying to retrieve EtmpDisplayRegistration for clients. Errors: ${error.body}."
-                  val exception: Exception = new Exception(message)
-                  logger.error(message, exception)
-                  throw exception
+              if (clientDetails.clientExcluded) {
+                etmpRegistrationConnector.getIossNetpRegistration(clientDetails.clientIossID).map {
+                  case Right(clientEtmpDisplayRegistration) => (clientDetails.clientIossID, clientEtmpDisplayRegistration.exclusions)
+                  case Left(error: ErrorResponse) =>
+                    val message: String = s"Received an unexpected error when trying to retrieve EtmpDisplayRegistration for clients. Errors: ${error.body}."
+                    val exception: Exception = new Exception(message)
+                    logger.error(message, exception)
+                    throw exception
+                }
+              } else {
+                Future.successful(clientDetails.clientIossID, Seq.empty)
               }
             }
           }.map(_.toMap)
