@@ -63,6 +63,7 @@ class EtmpDisplayRegistrationSpec extends BaseSpec {
         "clientDetails" -> Seq.empty[String],
         "schemeDetails" -> etmpDisplayRegistration.schemeDetails,
         "exclusions" -> Seq.empty[String],
+        "bankDetails" ->etmpDisplayRegistration.bankDetails,
         "adminUse" -> etmpDisplayRegistration.adminUse
       )
 
@@ -74,7 +75,7 @@ class EtmpDisplayRegistrationSpec extends BaseSpec {
         otherAddress = None,
         schemeDetails = etmpDisplayRegistration.schemeDetails,
         exclusions = Seq.empty,
-        bankDetails = None,
+        bankDetails = etmpDisplayRegistration.bankDetails,
         adminUse = etmpDisplayRegistration.adminUse
       )
 

@@ -20,12 +20,14 @@ import play.api.Logging
 import play.api.http.Status.OK
 import play.api.libs.json.{JsError, JsSuccess}
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpDisplayRegistration
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpDisplayRegistration, EtmpNetpDisplayRegistration}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.{ErrorResponse, InvalidJson, ServerError}
 
 object EtmpRegistrationHttpParser extends Logging {
 
   type EtmpDisplayRegistrationResponse = Either[ErrorResponse, EtmpDisplayRegistration]
+  
+  type EtmpNetpDisplayRegistrationResponse = Either[ErrorResponse, EtmpNetpDisplayRegistration]
 
   implicit object EtmpDisplayRegistrationReads extends HttpReads[EtmpDisplayRegistrationResponse] {
 
@@ -34,6 +36,25 @@ object EtmpRegistrationHttpParser extends Logging {
         case OK =>
           (response.json \ "etmpDisplayRegistration").validate[EtmpDisplayRegistration] match {
             case JsSuccess(etmpDisplayRegistration, _) => Right(etmpDisplayRegistration)
+            case JsError(errors) =>
+              logger.error(s"Failed when parsing ETMP Display Registration response JSON with status ${response.status} and error $errors")
+              Left(InvalidJson)
+          }
+
+        case status =>
+          logger.error(s"An error occurred when retrieving ETMP Display Registration with status $status and response body ${response.body}")
+          Left(ServerError)
+      }
+    }
+  }
+  
+  implicit object EtmpNetpDisplayRegistrationReads extends HttpReads[EtmpNetpDisplayRegistrationResponse] {
+
+    override def read(method: String, url: String, response: HttpResponse): EtmpNetpDisplayRegistrationResponse = {
+      response.status match {
+        case OK =>
+          (response.json \ "etmpDisplayRegistration").validate[EtmpNetpDisplayRegistration] match {
+            case JsSuccess(etmpNetpDisplayRegistration, _) => Right(etmpNetpDisplayRegistration)
             case JsError(errors) =>
               logger.error(s"Failed when parsing ETMP Display Registration response JSON with status ${response.status} and error $errors")
               Left(InvalidJson)

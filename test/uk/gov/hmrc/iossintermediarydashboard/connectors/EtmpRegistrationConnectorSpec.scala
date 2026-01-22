@@ -9,7 +9,7 @@ import play.api.libs.json.Json
 import play.api.test.Helpers.running
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpDisplayRegistration
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpDisplayRegistration, EtmpNetpDisplayRegistration}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.{GatewayTimeout, InvalidJson, ServerError}
 
 class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
@@ -17,6 +17,7 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
   private implicit val hc: HeaderCarrier = new HeaderCarrier()
 
   private val etmpDisplayRegistration: EtmpDisplayRegistration = arbitraryEtmpDisplayRegistration.arbitrary.sample.value
+  private val etmpNetpDisplayRegistration: EtmpNetpDisplayRegistration = arbitraryNetpEtmpDisplayRegistration.arbitrary.sample.value
 
   private def intermediaryApplication: Application = applicationBuilder()
     .configure(
@@ -122,9 +123,9 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
       val url: String = s"/ioss-netp-registration/registrations/$iossNumber"
 
-      "must return  Right(EtmpDisplayRegistration) for a given ioss number when the server returns OK with a valid payload" in {
+      "must return  Right(EtmpNetpDisplayRegistration) for a given ioss number when the server returns OK with a valid payload" in {
 
-        val expectedJsonResponse: String = s"""{"etmpDisplayRegistration": ${Json.toJson(etmpDisplayRegistration)}}"""
+        val expectedJsonResponse: String = s"""{"etmpDisplayRegistration": ${Json.toJson(etmpNetpDisplayRegistration)}}"""
 
         server.stubFor(
           get(urlEqualTo(url))
@@ -140,7 +141,7 @@ class EtmpRegistrationConnectorSpec extends BaseSpec with WireMockHelper {
 
           val result = connector.getIossNetpRegistration(iossNumber).futureValue
 
-          result `mustBe` Right(etmpDisplayRegistration)
+          result `mustBe` Right(etmpNetpDisplayRegistration)
         }
       }
 

@@ -54,10 +54,8 @@ class ReturnStatusController @Inject()(
                 etmpRegistrationConnector.getIossNetpRegistration(clientDetails.clientIossID).map {
                   case Right(clientEtmpDisplayRegistration) => (clientDetails.clientIossID, clientEtmpDisplayRegistration.exclusions)
                   case Left(error: ErrorResponse) =>
-                    val message: String = s"Received an unexpected error when trying to retrieve EtmpDisplayRegistration for clients. Errors: ${error.body}."
-                    val exception: Exception = new Exception(message)
-                    logger.error(message, exception)
-                    throw exception
+                    logger.error(s"Unable to retrieve the registration for client ${clientDetails.clientIossID} with error: ${error.body}.")
+                    throw Exception(s"Unable to retrieve the registration for client ${clientDetails.clientIossID} with error: ${error.body}.")
                 }
               } else {
                 Future.successful(clientDetails.clientIossID, Seq.empty)

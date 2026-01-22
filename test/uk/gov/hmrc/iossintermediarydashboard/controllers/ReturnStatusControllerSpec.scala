@@ -28,7 +28,7 @@ class ReturnStatusControllerSpec extends BaseSpec {
       "must return OK with a Seq[CurrentReturns] payload when invoked" in {
 
         when(mockReturnsService.getCurrentReturns(any(), any(), any())) thenReturn currentReturns.toFuture
-        when(mockEtmpRegistrationConnector.getIossNetpRegistration(any())(any())) thenReturn Right(arbitraryEtmpDisplayRegistration.arbitrary.sample.value).toFuture
+        when(mockEtmpRegistrationConnector.getIossNetpRegistration(any())(any())) thenReturn Right(arbitraryNetpEtmpDisplayRegistration.arbitrary.sample.value).toFuture
 
         val app = applicationBuilder()
           .overrides(
@@ -50,7 +50,7 @@ class ReturnStatusControllerSpec extends BaseSpec {
       "must return an empty JSON array when there are no returns retrieved" in {
 
         when(mockReturnsService.getCurrentReturns(any(), any(), any())) thenReturn Seq.empty.toFuture
-        when(mockEtmpRegistrationConnector.getIossNetpRegistration(any())(any())) thenReturn Right(arbitraryEtmpDisplayRegistration.arbitrary.sample.value).toFuture
+        when(mockEtmpRegistrationConnector.getIossNetpRegistration(any())(any())) thenReturn Right(arbitraryNetpEtmpDisplayRegistration.arbitrary.sample.value).toFuture
 
         val app = applicationBuilder()
           .overrides(bind[ReturnsService].toInstance(mockReturnsService),

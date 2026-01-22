@@ -377,7 +377,31 @@ trait Generators {
           otherAddress = Some(otherAddress),
           schemeDetails = schemeDetails,
           exclusions = exclusions,
-          bankDetails = Some(bankDetails),
+          bankDetails = bankDetails,
+          adminUse = adminUse
+        )
+      }
+    }
+  }
+  
+  implicit lazy val arbitraryNetpEtmpDisplayRegistration: Arbitrary[EtmpNetpDisplayRegistration] = {
+    Arbitrary {
+      for {
+        customerIdentification <- arbitraryEtmpCustomerIdentification.arbitrary
+        tradingNames <- Gen.listOfN(3, arbitraryEtmpTradingName.arbitrary)
+        clientDetails <- Gen.listOfN(3, arbitraryEtmpClientDetails.arbitrary)
+        otherAddress <- arbitraryEtmpOtherAddress.arbitrary
+        schemeDetails <- arbitraryEtmpDisplaySchemeDetails.arbitrary
+        exclusions <- Gen.listOfN(1, arbitraryEtmpExclusion.arbitrary)
+        adminUse <- arbitraryEtmpAdminUse.arbitrary
+      } yield {
+        EtmpNetpDisplayRegistration(
+          customerIdentification = customerIdentification,
+          tradingNames = tradingNames,
+          clientDetails = clientDetails,
+          otherAddress = Some(otherAddress),
+          schemeDetails = schemeDetails,
+          exclusions = exclusions,
           adminUse = adminUse
         )
       }

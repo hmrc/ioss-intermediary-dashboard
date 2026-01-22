@@ -21,6 +21,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, StringContextOps}
 import uk.gov.hmrc.iossintermediarydashboard.config.Service
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationHttpParser.{EtmpDisplayRegistrationReads, EtmpDisplayRegistrationResponse}
+import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationHttpParser.{EtmpNetpDisplayRegistrationReads, EtmpNetpDisplayRegistrationResponse}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.GatewayTimeout
 
 import javax.inject.Inject
@@ -46,9 +47,9 @@ class EtmpRegistrationConnector @Inject()(
       }
   }
   
-  def getIossNetpRegistration(iossNumber: String)(implicit hc: HeaderCarrier): Future[EtmpDisplayRegistrationResponse] = {
+  def getIossNetpRegistration(iossNumber: String)(implicit hc: HeaderCarrier): Future[EtmpNetpDisplayRegistrationResponse] = {
     httpClientV2.get(url"${iossRegistrationUrl}/registrations/$iossNumber")
-      .execute[EtmpDisplayRegistrationResponse]
+      .execute[EtmpNetpDisplayRegistrationResponse]
       .recover {
         case e: HttpException =>
           logger.error(s"There was an unexpected error retrieving ETMP Display Registration with status ${e.responseCode} and body ${e.message}")

@@ -18,19 +18,18 @@ package uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration
 
 import play.api.libs.json.{Json, OFormat}
 
-case class EtmpDisplayRegistration(
+case class EtmpNetpDisplayRegistration(
                                     customerIdentification: EtmpCustomerIdentification,
                                     tradingNames: Seq[EtmpTradingName],
                                     clientDetails: Seq[EtmpClientDetails],
-                                    intermediaryDetails: Option[EtmpIntermediaryDetails],
                                     otherAddress: Option[EtmpOtherAddress],
                                     schemeDetails: EtmpDisplaySchemeDetails,
                                     exclusions: Seq[EtmpExclusion],
-                                    bankDetails: EtmpBankDetails,
                                     adminUse: EtmpAdminUse
-                                  )
+                                  ) {
+}
 
-object EtmpDisplayRegistration {
+object EtmpNetpDisplayRegistration {
 
-  implicit val format: OFormat[EtmpDisplayRegistration] = Json.format[EtmpDisplayRegistration]
+  implicit val format: OFormat[EtmpNetpDisplayRegistration] = Json.format[EtmpNetpDisplayRegistration]
 }
