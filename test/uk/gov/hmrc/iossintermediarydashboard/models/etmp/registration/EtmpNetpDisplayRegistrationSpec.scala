@@ -30,7 +30,6 @@ class EtmpNetpDisplayRegistrationSpec extends BaseSpec {
       val json = Json.obj(
         "customerIdentification" -> etmpNetpDisplayRegistration.customerIdentification,
         "tradingNames" -> etmpNetpDisplayRegistration.tradingNames,
-        "clientDetails" -> etmpNetpDisplayRegistration.clientDetails,
         "otherAddress" -> etmpNetpDisplayRegistration.otherAddress,
         "schemeDetails" -> etmpNetpDisplayRegistration.schemeDetails,
         "exclusions" -> etmpNetpDisplayRegistration.exclusions,
@@ -40,7 +39,6 @@ class EtmpNetpDisplayRegistrationSpec extends BaseSpec {
       val expectedResult = EtmpNetpDisplayRegistration(
         customerIdentification = etmpNetpDisplayRegistration.customerIdentification,
         tradingNames = etmpNetpDisplayRegistration.tradingNames,
-        clientDetails = etmpNetpDisplayRegistration.clientDetails,
         otherAddress = etmpNetpDisplayRegistration.otherAddress,
         schemeDetails = etmpNetpDisplayRegistration.schemeDetails,
         exclusions = etmpNetpDisplayRegistration.exclusions,
@@ -56,7 +54,6 @@ class EtmpNetpDisplayRegistrationSpec extends BaseSpec {
       val json = Json.obj(
         "customerIdentification" -> etmpNetpDisplayRegistration.customerIdentification,
         "tradingNames" -> Seq.empty[String],
-        "clientDetails" -> Seq.empty[String],
         "schemeDetails" -> etmpNetpDisplayRegistration.schemeDetails,
         "exclusions" -> Seq.empty[String],
         "adminUse" -> etmpNetpDisplayRegistration.adminUse
@@ -65,7 +62,6 @@ class EtmpNetpDisplayRegistrationSpec extends BaseSpec {
       val expectedResult = EtmpNetpDisplayRegistration(
         customerIdentification = etmpNetpDisplayRegistration.customerIdentification,
         tradingNames = Seq.empty,
-        clientDetails = Seq.empty,
         otherAddress = None,
         schemeDetails = etmpNetpDisplayRegistration.schemeDetails,
         exclusions = Seq.empty,

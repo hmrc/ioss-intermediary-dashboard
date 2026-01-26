@@ -292,7 +292,7 @@ trait Generators {
         Some(addressLine2),
         townOrCity,
         Some(regionOrState),
-        postcode
+        Some(postcode)
       )
     }
   }
@@ -389,7 +389,6 @@ trait Generators {
       for {
         customerIdentification <- arbitraryEtmpCustomerIdentification.arbitrary
         tradingNames <- Gen.listOfN(3, arbitraryEtmpTradingName.arbitrary)
-        clientDetails <- Gen.listOfN(3, arbitraryEtmpClientDetails.arbitrary)
         otherAddress <- arbitraryEtmpOtherAddress.arbitrary
         schemeDetails <- arbitraryEtmpDisplaySchemeDetails.arbitrary
         exclusions <- Gen.listOfN(1, arbitraryEtmpExclusion.arbitrary)
@@ -398,7 +397,6 @@ trait Generators {
         EtmpNetpDisplayRegistration(
           customerIdentification = customerIdentification,
           tradingNames = tradingNames,
-          clientDetails = clientDetails,
           otherAddress = Some(otherAddress),
           schemeDetails = schemeDetails,
           exclusions = exclusions,
