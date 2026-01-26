@@ -48,9 +48,12 @@ class EtmpRegistrationConnector @Inject()(
   }
   
   def getIossNetpRegistration(iossNumber: String)(implicit hc: HeaderCarrier): Future[EtmpNetpDisplayRegistrationResponse] = {
-    httpClientV2.get(url"${iossRegistrationUrl}/registrations/$iossNumber")
+    val thisThing = httpClientV2.get(url"${iossRegistrationUrl}/registrations/$iossNumber")
       .execute[EtmpNetpDisplayRegistrationResponse]
-      .recover {
+      
+      thisThing.foreach(unwrapped => println(s"\n\n $unwrapped"))
+    
+      thisThing.recover {
         case e: HttpException =>
           logger.error(s"There was an unexpected error retrieving ETMP Display Registration with status ${e.responseCode} and body ${e.message}")
           Left(GatewayTimeout)

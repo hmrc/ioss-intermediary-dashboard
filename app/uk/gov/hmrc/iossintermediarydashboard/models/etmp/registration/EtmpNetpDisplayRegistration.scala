@@ -21,7 +21,6 @@ import play.api.libs.json.{Json, OFormat}
 case class EtmpNetpDisplayRegistration(
                                     customerIdentification: EtmpCustomerIdentification,
                                     tradingNames: Seq[EtmpTradingName],
-                                    clientDetails: Seq[EtmpClientDetails],
                                     otherAddress: Option[EtmpOtherAddress],
                                     schemeDetails: EtmpDisplaySchemeDetails,
                                     exclusions: Seq[EtmpExclusion],
