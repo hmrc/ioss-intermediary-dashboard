@@ -17,7 +17,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.services
 
 import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.Complete
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpClientDetails, EtmpExclusion}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.Reversal
 import uk.gov.hmrc.iossintermediarydashboard.models.{CurrentReturns, Period, PeriodWithStatus, Return, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getPrevious
@@ -33,14 +33,14 @@ class ReturnsService @Inject(
   def getCurrentReturns(
                          intermediaryNumber: String,
                          parsedCommencementDate: LocalDate,
-                         exclusions: List[EtmpExclusion]
+                         clientExclusions: Map[String, Seq[EtmpExclusion]]
                        ): Future[Seq[CurrentReturns]] = {
     for {
-      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, exclusions)
-    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, exclusions)
+      availablePeriodsWithStatus <- obligationsService.getPeriodsWithStatus(intermediaryNumber, parsedCommencementDate, clientExclusions)
+    } yield currentReturnsFromPeriodWithStatus(availablePeriodsWithStatus, clientExclusions)
   }
 
-  private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]], exclusions: List[EtmpExclusion]): Seq[CurrentReturns] = {
+  private def currentReturnsFromPeriodWithStatus(periodsWithStatus: Map[String, Seq[PeriodWithStatus]], clientExclusions: Map[String, Seq[EtmpExclusion]]): Seq[CurrentReturns] = {
 
     periodsWithStatus.map {
       case (iossNumber, clientObligations) =>
@@ -72,8 +72,13 @@ class ReturnsService @Inject(
           )
         }
 
-        val finalReturnCompleted = hasSubmittedFinalReturn(exclusions, clientObligations)
+        val exclusionsForThisClient: Seq[EtmpExclusion] = clientExclusions.get(iossNumber) match
+          case Some(clientExclusionList) => clientExclusionList
+          case None => List.empty
 
+
+        val finalReturnCompleted = hasSubmittedFinalReturn(exclusionsForThisClient, clientObligations) 
+        
         CurrentReturns(
           iossNumber = iossNumber,
           incompleteReturns = incompleteReturns,
@@ -83,7 +88,9 @@ class ReturnsService @Inject(
     }.toSeq
   }
 
-  private def hasSubmittedFinalReturn(exclusions: List[EtmpExclusion], periodsWithStatus: Seq[PeriodWithStatus]): Boolean = {
+  private def hasSubmittedFinalReturn(exclusions: Seq[EtmpExclusion], periodsWithStatus: Seq[PeriodWithStatus]): Boolean = {
+
+
     exclusions.headOption.filterNot(_.exclusionReason == Reversal) match {
       case Some(EtmpExclusion(_, _, effectiveDate, _)) =>
         periodsWithStatus.exists {

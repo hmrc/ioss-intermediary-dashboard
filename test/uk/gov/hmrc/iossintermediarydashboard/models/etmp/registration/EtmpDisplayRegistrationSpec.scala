@@ -55,6 +55,35 @@ class EtmpDisplayRegistrationSpec extends BaseSpec {
       Json.toJson(expectedResult) `mustBe` json
     }
 
+    "must deserialise/serialise from and to EtmpDisplayRegistration with optional values not present" in {
+
+      val json = Json.obj(
+        "customerIdentification" -> etmpDisplayRegistration.customerIdentification,
+        "tradingNames" -> Seq.empty[String],
+        "clientDetails" -> Seq.empty[String],
+        "schemeDetails" -> etmpDisplayRegistration.schemeDetails,
+        "exclusions" -> Seq.empty[String],
+        "bankDetails" ->etmpDisplayRegistration.bankDetails,
+        "adminUse" -> etmpDisplayRegistration.adminUse
+      )
+
+      val expectedResult = EtmpDisplayRegistration(
+        customerIdentification = etmpDisplayRegistration.customerIdentification,
+        tradingNames = Seq.empty,
+        clientDetails = Seq.empty,
+        intermediaryDetails = None,
+        otherAddress = None,
+        schemeDetails = etmpDisplayRegistration.schemeDetails,
+        exclusions = Seq.empty,
+        bankDetails = etmpDisplayRegistration.bankDetails,
+        adminUse = etmpDisplayRegistration.adminUse
+      )
+
+      json.validate[EtmpDisplayRegistration] `mustBe` JsSuccess(expectedResult)
+      Json.toJson(expectedResult) `mustBe` json
+    }
+
+
     "must handle missing fields during deserialization" in {
 
       val json = Json.obj()

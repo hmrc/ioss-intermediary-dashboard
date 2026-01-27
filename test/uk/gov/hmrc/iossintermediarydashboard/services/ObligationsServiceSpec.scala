@@ -1,7 +1,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.services
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
+import org.mockito.ArgumentMatchers.{any, same}
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.mockito.Mockito.when
 import org.scalatest.PrivateMethodTester.PrivateMethod
 import org.scalatest.{BeforeAndAfterEach, PrivateMethodTester}
@@ -9,9 +9,10 @@ import play.api.http.Status.INTERNAL_SERVER_ERROR
 import uk.gov.hmrc.iossintermediarydashboard.base.BaseSpec
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpObligationsConnector
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.{getNext, getRunningPeriod, toEtmpPeriodString}
-import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.{Complete, Due, Next, Overdue}
+import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.{Complete, Due, Excluded, Expired, Next, Overdue}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.EtmpObligationsFulfilmentStatus.{Fulfilled, Open}
 import uk.gov.hmrc.iossintermediarydashboard.models.etmp.obligations.{EtmpObligation, EtmpObligationDetails, EtmpObligationIdentification, EtmpObligations, EtmpObligationsQueryParameters}
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpExclusion, EtmpExclusionReason}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.EtmpObligationsError
 import uk.gov.hmrc.iossintermediarydashboard.models.{Period, PeriodWithStatus, StandardPeriod, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.utils.FutureSyntax.FutureOps
@@ -35,6 +36,25 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
   override def beforeEach(): Unit = {
     Mockito.reset(mockEtmpObligationsConnector)
+    Mockito.reset(mockCheckExclusionService)
+  }
+
+  val excludedExclusion: EtmpExclusion =
+    EtmpExclusion(
+      exclusionReason = EtmpExclusionReason.TransferringMSID,
+      effectiveDate = LocalDate.of(2025, 7, 1),
+      decisionDate = LocalDate.of(2025, 7, 1),
+      quarantine = true
+    )
+
+  private def createClientExceptions(clientIds: Seq[String]): Map[String, Seq[EtmpExclusion]] = {
+    if (clientIds.isEmpty) {
+      Map.empty
+    } else {
+      clientIds.map { clientId =>
+        clientId -> Seq(excludedExclusion)
+      }.toMap
+    }
   }
 
   "ObligationsService" - {
@@ -46,147 +66,301 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
       "for each client" - {
 
         "when all obligations are fulfilled" - {
+          "and the client is NOT EXCLUDED" - {
+            "must return the current list of periods with status COMPLETE from the commencement date and the next period" in {
 
-          "must return the current list of periods with status from the commencement date and the next period" in {
+              val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
 
-            val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+              val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
+              val period2: Period = getNext(period1)
+              val period3: Period = getNext(period2)
+              val nextPeriod: Period = getNext(period3)
 
-            val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
-            val period2: Period = getNext(period1)
-            val period3: Period = getNext(period2)
-            val nextPeriod: Period = getNext(period3)
-
-            val completedObligations: EtmpObligations = EtmpObligations(
-              obligations = Seq(
-                EtmpObligation(
-                  identification = EtmpObligationIdentification(iossNumber),
-                  obligationDetails = Seq(
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(period1)
-                    ),
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(period2)
-                    ),
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(period3)
+              val completedObligations: EtmpObligations = EtmpObligations(
+                obligations = Seq(
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(iossNumber),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(period1)
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(period2)
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(period3)
+                      )
                     )
-                  )
-                ),
-                EtmpObligation(
-                  identification = EtmpObligationIdentification(clientReferenceNumberB),
-                  obligationDetails = Seq(
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
-                    ),
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
-                    ),
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                  ),
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(clientReferenceNumberB),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                      )
                     )
                   )
                 )
               )
-            )
 
-            when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
+              when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
 
-            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+              when(mockCheckExclusionService.isPeriodExpired(any(), any())) thenReturn false
+              when(mockCheckExclusionService.isPeriodExcluded(any(), any())) thenReturn false
 
-            val expectedList: Map[String, List[PeriodWithStatus]] = Map(
-              iossNumber -> List(
-                PeriodWithStatus(iossNumber, period1, Complete),
-                PeriodWithStatus(iossNumber, period2, Complete),
-                PeriodWithStatus(iossNumber, period3, Complete),
-                PeriodWithStatus(iossNumber, nextPeriod, Next)
-              ),
-              clientReferenceNumberB -> List(
-                PeriodWithStatus(clientReferenceNumberB, period1, Complete),
-                PeriodWithStatus(clientReferenceNumberB, period2, Complete),
-                PeriodWithStatus(clientReferenceNumberB, period3, Complete),
-                PeriodWithStatus(clientReferenceNumberB, nextPeriod, Next)
+              val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, clientReferenceNumberB))).futureValue
+
+              val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+                iossNumber -> List(
+                  PeriodWithStatus(iossNumber, period1, Complete),
+                  PeriodWithStatus(iossNumber, period2, Complete),
+                  PeriodWithStatus(iossNumber, period3, Complete),
+                  PeriodWithStatus(iossNumber, nextPeriod, Next)
+                ),
+                clientReferenceNumberB -> List(
+                  PeriodWithStatus(clientReferenceNumberB, period1, Complete),
+                  PeriodWithStatus(clientReferenceNumberB, period2, Complete),
+                  PeriodWithStatus(clientReferenceNumberB, period3, Complete),
+                  PeriodWithStatus(clientReferenceNumberB, nextPeriod, Next)
+                )
               )
-            )
 
-            result `mustBe` expectedList
+              result `mustBe` expectedList
+            }
+          }
+          "and the client IS EXCLUDED and some periods qualify as EXPIRED" - {
+            "must return the current list of periods with status COMPLETE from the commencement date and the next period" in {
+
+              val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+
+              val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
+              val period2: Period = getNext(period1)
+              val period3: Period = getNext(period2)
+              val nextPeriod: Period = getNext(period3)
+
+              val completedObligations: EtmpObligations = EtmpObligations(
+                obligations = Seq(
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(iossNumber),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(period1)
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(period2)
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(period3)
+                      )
+                    )
+                  ),
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(clientReferenceNumberB),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
+                      ),
+                      EtmpObligationDetails(
+                        status = Fulfilled,
+                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                      )
+                    )
+                  )
+                )
+              )
+
+              when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(completedObligations).toFuture
+
+              when(mockCheckExclusionService.isPeriodExpired(ArgumentMatchers.eq(period1), any())) thenReturn true
+              when(mockCheckExclusionService.isPeriodExcluded(ArgumentMatchers.eq(period2), any())) thenReturn true
+              when(mockCheckExclusionService.isPeriodExpired(any(), any())) thenReturn false
+              when(mockCheckExclusionService.isPeriodExcluded(any(), any())) thenReturn false
+
+              val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, clientReferenceNumberB))).futureValue
+
+              val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+                iossNumber -> List(
+                  PeriodWithStatus(iossNumber, period1, Complete),
+                  PeriodWithStatus(iossNumber, period2, Complete),
+                  PeriodWithStatus(iossNumber, period3, Complete),
+                  PeriodWithStatus(iossNumber, nextPeriod, Next)
+                ),
+                clientReferenceNumberB -> List(
+                  PeriodWithStatus(clientReferenceNumberB, period1, Complete),
+                  PeriodWithStatus(clientReferenceNumberB, period2, Complete),
+                  PeriodWithStatus(clientReferenceNumberB, period3, Complete),
+                  PeriodWithStatus(clientReferenceNumberB, nextPeriod, Next)
+                )
+              )
+
+              result `mustBe` expectedList
+            }
           }
         }
 
         "when all obligations are not fulfilled" - {
+          "and the client is NOT EXCLUDED" - {
+            "must return a list of periods with statuses DUE & OVERDUE dating from the commencement date to the current period" in {
 
-          "must return a list of periods with status dating from the commencement date to the current period" in {
+              val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
 
-            val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+              val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
+              val period2: Period = getNext(period1)
+              val period3: Period = getNext(period2)
 
-            val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
-            val period2: Period = getNext(period1)
-            val period3: Period = getNext(period2)
-            val nextPeriod: Period = getNext(period3)
-
-            val withUnfulfilledObligations: EtmpObligations = EtmpObligations(
-              obligations = Seq(
-                EtmpObligation(
-                  identification = EtmpObligationIdentification(iossNumber),
-                  obligationDetails = Seq(
-                    EtmpObligationDetails(
-                      status = Open,
-                      periodKey = toEtmpPeriodString(period1)
-                    ),
-                    EtmpObligationDetails(
-                      status = Open,
-                      periodKey = toEtmpPeriodString(period2)
-                    ),
-                    EtmpObligationDetails(
-                      status = Open,
-                      periodKey = toEtmpPeriodString(period3)
+              val withUnfulfilledObligations: EtmpObligations = EtmpObligations(
+                obligations = Seq(
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(iossNumber),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period1)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period2)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period3)
+                      )
                     )
-                  )
-                ),
-                EtmpObligation(
-                  identification = EtmpObligationIdentification(clientReferenceNumberB),
-                  obligationDetails = Seq(
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(period1)
-                    ),
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(period2)
-                    ),
-                    EtmpObligationDetails(
-                      status = Fulfilled,
-                      periodKey = toEtmpPeriodString(period3)
+                  ),
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(clientReferenceNumberB),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period1)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period2)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period3)
+                      )
                     )
                   )
                 )
               )
-            )
 
-            when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(withUnfulfilledObligations).toFuture
+              when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(withUnfulfilledObligations).toFuture
 
-            val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+              when(mockCheckExclusionService.isPeriodExpired(any(), any())) thenReturn false
+              when(mockCheckExclusionService.isPeriodExcluded(any(), any())) thenReturn false
 
-            val expectedList: Map[String, List[PeriodWithStatus]] = Map(
-              clientReferenceNumberB -> List(
-                PeriodWithStatus(clientReferenceNumberB, period1, Complete),
-                PeriodWithStatus(clientReferenceNumberB, period2, Complete),
-                PeriodWithStatus(clientReferenceNumberB, period3, Complete),
-                PeriodWithStatus(clientReferenceNumberB, nextPeriod, Next)
-              ),
-              iossNumber -> List(
-                PeriodWithStatus(iossNumber, period1, Overdue),
-                PeriodWithStatus(iossNumber, period2, Overdue),
-                PeriodWithStatus(iossNumber, period3, Due)
+              val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, clientReferenceNumberB))).futureValue
+
+              val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+                clientReferenceNumberB -> List(
+                  PeriodWithStatus(clientReferenceNumberB, period1, Overdue),
+                  PeriodWithStatus(clientReferenceNumberB, period2, Overdue),
+                  PeriodWithStatus(clientReferenceNumberB, period3, Due),
+                ),
+                iossNumber -> List(
+                  PeriodWithStatus(iossNumber, period1, Overdue),
+                  PeriodWithStatus(iossNumber, period2, Overdue),
+                  PeriodWithStatus(iossNumber, period3, Due)
+                )
               )
-            )
 
-            result `mustBe` expectedList
+              result `mustBe` expectedList
+            }
+          }
+          "and the client IS EXCLUDED and some periods qualify as EXPIRED" - {
+            "must return a list of periods with statuses EXCLUDED & EXPIRED dating from the commencement date to the current period" in {
+
+              val commencementDate: LocalDate = LocalDate.now(stubClock).minusMonths(3)
+
+              val period1: Period = StandardPeriod(commencementDate.getYear, commencementDate.getMonth)
+              val period2: Period = getNext(period1)
+              val period3: Period = getNext(period2)
+
+              val withUnfulfilledObligations: EtmpObligations = EtmpObligations(
+                obligations = Seq(
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(iossNumber),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period1)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period2)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period3)
+                      )
+                    )
+                  ),
+                  EtmpObligation(
+                    identification = EtmpObligationIdentification(clientReferenceNumberB),
+                    obligationDetails = Seq(
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period1)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period2)
+                      ),
+                      EtmpObligationDetails(
+                        status = Open,
+                        periodKey = toEtmpPeriodString(period3)
+                      )
+                    )
+                  )
+                )
+              )
+
+              when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(withUnfulfilledObligations).toFuture
+
+              when(mockCheckExclusionService.isPeriodExcluded(ArgumentMatchers.eq(period1), any())) thenReturn true
+              when(mockCheckExclusionService.isPeriodExcluded(ArgumentMatchers.eq(period2), any())) thenReturn true
+              when(mockCheckExclusionService.isPeriodExpired(ArgumentMatchers.eq(period3), any())) thenReturn true
+
+              val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq(iossNumber, clientReferenceNumberB))).futureValue
+
+              val expectedList: Map[String, List[PeriodWithStatus]] = Map(
+                clientReferenceNumberB -> List(
+                  PeriodWithStatus(clientReferenceNumberB, period1, Excluded),
+                  PeriodWithStatus(clientReferenceNumberB, period2, Excluded),
+                  PeriodWithStatus(clientReferenceNumberB, period3, Expired),
+                ),
+                iossNumber -> List(
+                  PeriodWithStatus(iossNumber, period1, Excluded),
+                  PeriodWithStatus(iossNumber, period2, Excluded),
+                  PeriodWithStatus(iossNumber, period3, Expired)
+                )
+              )
+
+              result `mustBe` expectedList
+            }
           }
         }
 
@@ -211,7 +385,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq.empty)).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -243,7 +417,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq.empty)).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(
@@ -278,7 +452,7 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
 
           when(mockEtmpObligationsConnector.getObligations(any(), any())) thenReturn Right(startingObligation).toFuture
 
-          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, exclusion).futureValue
+          val result = service.getPeriodsWithStatus(intermediaryNumber, commencementDate, createClientExceptions(Seq.empty)).futureValue
 
           val expectedList: Map[String, List[PeriodWithStatus]] = Map(
             iossNumber -> List(

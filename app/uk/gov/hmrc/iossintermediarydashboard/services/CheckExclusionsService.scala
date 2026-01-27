@@ -31,12 +31,12 @@ class CheckExclusionsService @Inject()(clock: Clock) {
     today.isAfter(dueDate.plusYears(excludedReturnAndPaymentExpiry))
   }
 
-  def getLastExclusionWithoutReversal(exclusions: List[EtmpExclusion]): Option[EtmpExclusion] = {
+  def getLastExclusionWithoutReversal(exclusions: Seq[EtmpExclusion]): Option[EtmpExclusion] = {
     // Even though API is array ETMP only return single item
     exclusions.headOption.filterNot(_.exclusionReason == Reversal)
   }
 
-  def isPeriodExcluded(period: Period, exclusions: List[EtmpExclusion]): Boolean = {
+  def isPeriodExcluded(period: Period, exclusions: Seq[EtmpExclusion]): Boolean = {
     val excluded = getLastExclusionWithoutReversal(exclusions)
 
     excluded match {
@@ -46,7 +46,7 @@ class CheckExclusionsService @Inject()(clock: Clock) {
     }
   }
 
-  def isPeriodExpired(period: Period, exclusions: List[EtmpExclusion]): Boolean = {
+  def isPeriodExpired(period: Period, exclusions: Seq[EtmpExclusion]): Boolean = {
     val excluded = getLastExclusionWithoutReversal(exclusions)
 
     excluded match {

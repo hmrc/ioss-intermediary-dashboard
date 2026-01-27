@@ -21,6 +21,7 @@ import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, StringContextOps}
 import uk.gov.hmrc.iossintermediarydashboard.config.Service
 import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationHttpParser.{EtmpDisplayRegistrationReads, EtmpDisplayRegistrationResponse}
+import uk.gov.hmrc.iossintermediarydashboard.connectors.EtmpRegistrationHttpParser.{EtmpNetpDisplayRegistrationReads, EtmpNetpDisplayRegistrationResponse}
 import uk.gov.hmrc.iossintermediarydashboard.models.responses.GatewayTimeout
 
 import javax.inject.Inject
@@ -32,11 +33,23 @@ class EtmpRegistrationConnector @Inject()(
                                          )(implicit ec: ExecutionContext) extends Logging {
 
   private val displayRegistrationUrl: Service = config.get[Service]("microservice.services.ioss-intermediary-registration")
+  private val iossRegistrationUrl: Service = config.get[Service]("microservice.services.ioss-netp-registration")
+
 
   def getRegistration(intermediaryNumber: String)(implicit hc: HeaderCarrier): Future[EtmpDisplayRegistrationResponse] = {
 
     httpClientV2.get(url"${displayRegistrationUrl}/get-registration/$intermediaryNumber")
       .execute[EtmpDisplayRegistrationResponse]
+      .recover {
+        case e: HttpException =>
+          logger.error(s"There was an unexpected error retrieving ETMP Display Registration with status ${e.responseCode} and body ${e.message}")
+          Left(GatewayTimeout)
+      }
+  }
+
+  def getIossNetpRegistration(iossNumber: String)(implicit hc: HeaderCarrier): Future[EtmpNetpDisplayRegistrationResponse] = {
+    httpClientV2.get(url"${iossRegistrationUrl}/registrations/$iossNumber")
+      .execute[EtmpNetpDisplayRegistrationResponse]
       .recover {
         case e: HttpException =>
           logger.error(s"There was an unexpected error retrieving ETMP Display Registration with status ${e.responseCode} and body ${e.message}")

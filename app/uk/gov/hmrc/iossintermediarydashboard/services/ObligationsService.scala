@@ -38,7 +38,7 @@ class ObligationsService @Inject()(
   def getPeriodsWithStatus(
                             intermediaryNumber: String,
                             commencementDate: LocalDate,
-                            exclusions: List[EtmpExclusion]
+                            clientExclusions: Map[String, Seq[EtmpExclusion]]
                           )(implicit ec: ExecutionContext): Future[Map[String, Seq[PeriodWithStatus]]] = {
 
     val allPeriodsToDate: Seq[Period] = getAllPeriodsBetween(commencementDate, today)
@@ -57,8 +57,12 @@ class ObligationsService @Inject()(
         (iossNumber, allObligationsForClient) =>
           allObligationsForClient.flatMap { etmpObligation =>
 
+            val exclusionsForIossNum: Seq[EtmpExclusion]  = clientExclusions.get(iossNumber) match
+              case Some(clientExclusionList) => clientExclusionList
+              case None => List.empty
+
             val allCurrentPeriodsForClient: List[PeriodWithStatus] = allPeriodsToDate.map { period =>
-              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods, exclusions)
+              determineStatus(iossNumber, period, etmpObligation.obligationDetails.getFulfilledPeriods, exclusionsForIossNum)
             }.toList
 
             addNextIfAllCompleted(iossNumber, allCurrentPeriodsForClient, commencementDate)
@@ -112,7 +116,7 @@ class ObligationsService @Inject()(
     }
   }
 
-  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period], exclusions: List[EtmpExclusion]): PeriodWithStatus = {
+  private def determineStatus(iossNumber: String, period: Period, fulfilledPeriods: List[Period], exclusions: Seq[EtmpExclusion]): PeriodWithStatus = {
     if (fulfilledPeriods.contains(period)) {
       PeriodWithStatus(iossNumber, period, SubmissionStatus.Complete)
     } else if (checkExclusionsService.isPeriodExcluded(period, exclusions)) {
