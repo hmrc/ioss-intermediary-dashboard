@@ -100,15 +100,15 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
                     obligationDetails = Seq(
                       EtmpObligationDetails(
                         status = Fulfilled,
-                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+                        periodKey = toEtmpPeriodString(period1)
                       ),
                       EtmpObligationDetails(
                         status = Fulfilled,
-                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
+                        periodKey = toEtmpPeriodString(period2)
                       ),
                       EtmpObligationDetails(
                         status = Fulfilled,
-                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                        periodKey = toEtmpPeriodString(period3)
                       )
                     )
                   )
@@ -174,15 +174,15 @@ class ObligationsServiceSpec extends BaseSpec with PrivateMethodTester with Befo
                     obligationDetails = Seq(
                       EtmpObligationDetails(
                         status = Fulfilled,
-                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth))
+                        periodKey = toEtmpPeriodString(period1)
                       ),
                       EtmpObligationDetails(
                         status = Fulfilled,
-                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(1)))
+                        periodKey = toEtmpPeriodString(period2)
                       ),
                       EtmpObligationDetails(
                         status = Fulfilled,
-                        periodKey = toEtmpPeriodString(StandardPeriod(commencementDate.getYear, commencementDate.getMonth.plus(2)))
+                        periodKey = toEtmpPeriodString(period3)
                       )
                     )
                   )
