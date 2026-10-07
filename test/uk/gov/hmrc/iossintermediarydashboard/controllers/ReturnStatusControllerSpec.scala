@@ -1,7 +1,7 @@
 package uk.gov.hmrc.iossintermediarydashboard.controllers
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{verifyNoInteractions, when}
+import org.mockito.Mockito.when
 import org.scalacheck.Gen
 import play.api.inject.bind
 import play.api.libs.json.Json
