@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.iossintermediarydashboard.services
 
-import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.Complete
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.{EtmpClientDetails, EtmpExclusion}
-import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.Reversal
-import uk.gov.hmrc.iossintermediarydashboard.models.{CurrentReturns, Period, PeriodWithStatus, Return, SubmissionStatus}
 import uk.gov.hmrc.iossintermediarydashboard.models.Period.getPrevious
+import uk.gov.hmrc.iossintermediarydashboard.models.SubmissionStatus.Complete
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusion
+import uk.gov.hmrc.iossintermediarydashboard.models.etmp.registration.EtmpExclusionReason.Reversal
+import uk.gov.hmrc.iossintermediarydashboard.models.*
 
 import java.time.LocalDate
 import javax.inject.Inject

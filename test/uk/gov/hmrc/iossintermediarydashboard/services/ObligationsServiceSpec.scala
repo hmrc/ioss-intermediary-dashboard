@@ -1,8 +1,8 @@
 package uk.gov.hmrc.iossintermediarydashboard.services
 
-import org.mockito.ArgumentMatchers.{any, same}
-import org.mockito.{ArgumentMatchers, Mockito}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.PrivateMethodTester.PrivateMethod
 import org.scalatest.{BeforeAndAfterEach, PrivateMethodTester}
 import play.api.http.Status.INTERNAL_SERVER_ERROR
