@@ -60,11 +60,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
           val bodyParsers = application.injector.instanceOf[BodyParsers.Default]
           val appConfig = application.injector.instanceOf[AppConfig]
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             new FakeFailingAuthConnector(new MissingBearerToken),
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -94,11 +95,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
           when(mockAuthConnector.authorise[RetrievalsType](any(), any())(any(), any()))
             .thenReturn(Future.successful(None ~ Enrolments(Set.empty)))
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             mockAuthConnector,
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -132,11 +134,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
           when(mockAuthConnector.authorise[RetrievalsType](any(), any())(any(), any()))
             .thenReturn(Future.successful(Some("id") ~ Enrolments(Set.empty)))
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             mockAuthConnector,
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -166,11 +169,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
           when(mockAuthConnector.authorise[RetrievalsType](any(), any())(any(), any()))
             .thenReturn(Future.successful(Some("id") ~ intermediaryEnrolment))
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             mockAuthConnector,
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -204,11 +208,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
           when(mockAuthConnector.authorise[RetrievalsType](any(), any())(any(), any()))
             .thenReturn(Future.successful(Some("id") ~ vatEnrolment))
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             mockAuthConnector,
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -241,11 +246,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
 
           when(mockEtmpRegistrationConnector.getRegistration(any())(any())) thenReturn Right(etmpDisplayRegistration).toFuture
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             mockAuthConnector,
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -277,11 +283,12 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
 
           when(mockEtmpRegistrationConnector.getRegistration(any())(any())) thenReturn Left(ServerError).toFuture
 
-          val authAction = new AuthActionImpl(
+          val authAction = new AuthAction(
             mockAuthConnector,
             bodyParsers,
             mockEtmpRegistrationConnector,
-            appConfig
+            appConfig,
+            None
           )
 
           val controller = new Harness(authAction)
@@ -293,6 +300,87 @@ class AuthActionSpec extends BaseSpec with BeforeAndAfterEach {
           }
           verify(mockAuthConnector, times(1)).authorise(any(), any())(any(), any())
           verify(mockEtmpRegistrationConnector, times(1)).getRegistration(any())(any())
+        }
+      }
+    }
+
+    "when the user is logged in with a VAT enrolment and multiple Intermediary enrolment" - {
+
+      val vatAndMultipleIntermediaryEnrolments = Enrolments(Set(
+        Enrolment("HMRC-MTD-VAT", Seq(EnrolmentIdentifier("VRN", "123456789")), "Activated"),
+        Enrolment("HMRC-IOSS-INT", Seq(EnrolmentIdentifier("IntNumber", "IN9001234567")), "Activated"),
+        Enrolment("HMRC-IOSS-INT", Seq(EnrolmentIdentifier("IntNumber", "IN9002345678")), "Activated")
+      ))
+
+      "must return OK when requested intermediary is mine with the retrieval of an ETMP Display Registration" in {
+
+        val application = applicationBuilder()
+          .overrides(
+            bind[AuthConnector].toInstance(mockAuthConnector),
+            bind[EtmpRegistrationConnector].toInstance(mockEtmpRegistrationConnector)
+          )
+          .build()
+
+        running(application) {
+          val bodyParsers = application.injector.instanceOf[BodyParsers.Default]
+          val appConfig = application.injector.instanceOf[AppConfig]
+
+          when(mockAuthConnector.authorise[RetrievalsType](any(), any())(any(), any()))
+            .thenReturn(Future.successful(Some("id") ~ vatAndMultipleIntermediaryEnrolments))
+
+          when(mockEtmpRegistrationConnector.getRegistration(any())(any())) thenReturn Right(etmpDisplayRegistration).toFuture
+
+          val authAction = new AuthAction(
+            mockAuthConnector,
+            bodyParsers,
+            mockEtmpRegistrationConnector,
+            appConfig,
+            Some("IN9001234567")
+          )
+
+          val controller = new Harness(authAction)
+          val result = controller.onPageLoad()(FakeRequest())
+
+          status(result) `mustBe` OK
+          verify(mockAuthConnector, times(1)).authorise(any(), any())(any(), any())
+          verify(mockEtmpRegistrationConnector, times(1)).getRegistration(any())(any())
+        }
+      }
+
+      "must return OK when requested intermediary is not mine an exception is thrown" in {
+
+        val error: ErrorResponse = ServerError
+
+        val application = applicationBuilder()
+          .overrides(
+            bind[AuthConnector].toInstance(mockAuthConnector),
+            bind[EtmpRegistrationConnector].toInstance(mockEtmpRegistrationConnector)
+          )
+          .build()
+
+        running(application) {
+          val bodyParsers = application.injector.instanceOf[BodyParsers.Default]
+          val appConfig = application.injector.instanceOf[AppConfig]
+
+          when(mockAuthConnector.authorise[RetrievalsType](any(), any())(any(), any()))
+            .thenReturn(Future.successful(Some("id") ~ vatAndMultipleIntermediaryEnrolments))
+
+          when(mockEtmpRegistrationConnector.getRegistration(any())(any())) thenReturn Right(etmpDisplayRegistration).toFuture
+
+          val authAction = new AuthAction(
+            mockAuthConnector,
+            bodyParsers,
+            mockEtmpRegistrationConnector,
+            appConfig,
+            Some("IN9007654321")
+          )
+
+          val controller = new Harness(authAction)
+          val result = controller.onPageLoad()(FakeRequest())
+
+          status(result) `mustBe` UNAUTHORIZED
+          verify(mockAuthConnector, times(1)).authorise(any(), any())(any(), any())
+          verifyNoInteractions(mockEtmpRegistrationConnector)
         }
       }
     }

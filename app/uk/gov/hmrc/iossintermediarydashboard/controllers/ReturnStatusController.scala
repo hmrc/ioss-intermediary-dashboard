@@ -39,7 +39,7 @@ class ReturnStatusController @Inject()(
                                         etmpRegistrationConnector: EtmpRegistrationConnector
                                       )(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
-  def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.auth().async {
+  def getCurrentReturns(intermediaryNumber: String): Action[AnyContent] = cc.auth(Some(intermediaryNumber)).async {
     implicit request =>
 
       if (request.registration.clientDetails.isEmpty) {

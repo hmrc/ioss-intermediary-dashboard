@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class FakeAuthAction @Inject()(bodyParsers: BodyParsers.Default)
-  extends AuthActionImpl(mock[AuthConnector], bodyParsers, mock[EtmpRegistrationConnector], mock[AppConfig])
+  extends AuthAction(mock[AuthConnector], bodyParsers, mock[EtmpRegistrationConnector], mock[AppConfig], None)
     with OptionValues
     with Generators {
 
