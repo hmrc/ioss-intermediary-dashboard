@@ -32,14 +32,17 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AuthAction extends ActionBuilder[AuthorisedRequest, AnyContent] with ActionFunction[Request, AuthorisedRequest]
-
-class AuthActionImpl @Inject()(
-                                override val authConnector: AuthConnector,
-                                override val parser: BodyParsers.Default,
-                                registrationConnector: EtmpRegistrationConnector,
-                                config: AppConfig
-                              )(implicit val executionContext: ExecutionContext) extends AuthAction with AuthorisedFunctions with Logging {
+class AuthAction(
+                  override val authConnector: AuthConnector,
+                  override val parser: BodyParsers.Default,
+                  registrationConnector: EtmpRegistrationConnector,
+                  config: AppConfig,
+                  maybeRequestedIntermediaryNumber: Option[String]
+                )(implicit val executionContext: ExecutionContext)
+  extends ActionBuilder[AuthorisedRequest, AnyContent]
+    with ActionFunction[Request, AuthorisedRequest]
+    with AuthorisedFunctions
+    with Logging {
 
   override def invokeBlock[A](request: Request[A], block: AuthorisedRequest[A] => Future[Result]): Future[Result] = {
 
@@ -47,11 +50,12 @@ class AuthActionImpl @Inject()(
 
     authorised().retrieve(Retrievals.internalId and Retrievals.allEnrolments) {
       case Some(internalId) ~ enrolments =>
-        findIntermediaryNumberFromEnrolments(enrolments) match {
-          case Some(intermediaryNumber) =>
-            val vrn: Vrn = findVrnFromEnrolments(enrolments)
+        lazy val vrn: Vrn = findVrnFromEnrolments(enrolments)
+        (findIntermediaryNumberFromEnrolments(enrolments), maybeRequestedIntermediaryNumber) match {
+          case (Some(intermediaryNumber), requestedIntermediaryNumber) if requestedIntermediaryNumber.isEmpty || requestedIntermediaryNumber.contains(intermediaryNumber) =>
             getRegistrationAndBlock(request, block, vrn, internalId, intermediaryNumber)
-
+          case (Some(intermediaryNumber), Some(requestedIntermediaryNumber)) if allIntermediaryNumbersFromEnrolment(enrolments).contains(requestedIntermediaryNumber) =>
+            getRegistrationAndBlock(request, block, vrn, internalId, requestedIntermediaryNumber)
           case _ =>
             logger.warn(s"Insufficient enrolments")
             throw InsufficientEnrolments("Insufficient enrolments")
@@ -85,11 +89,19 @@ class AuthActionImpl @Inject()(
     }
   }
 
-  private def findIntermediaryNumberFromEnrolments(enrolments: Enrolments): Option[String] = {
+  private def allIntermediaryNumbersFromEnrolment(enrolments: Enrolments): Set[String] = {
     val intermediaryEnrolmentKey: String = config.intermediaryEnrolmentIdentifierName
     enrolments.enrolments
-      .find(_.key == config.intermediaryEnrolment)
-      .flatMap(_.identifiers.find(id => id.key == intermediaryEnrolmentKey && id.value.nonEmpty).map(_.value))
+      .filter(_.key == config.intermediaryEnrolment)
+      .flatMap(_.identifiers
+        .filter(id => id.key == intermediaryEnrolmentKey && id.value.nonEmpty)
+        .map(_.value)
+      )
+  }
+
+
+  private def findIntermediaryNumberFromEnrolments(enrolments: Enrolments): Option[String] = {
+    allIntermediaryNumbersFromEnrolment(enrolments).headOption
   }
 
   private def findVrnFromEnrolments(enrolments: Enrolments): Vrn = {
@@ -100,4 +112,14 @@ class AuthActionImpl @Inject()(
         throw new IllegalStateException("Missing VAT enrolment")
       }
   }
+}
+
+class AuthActionProvider @Inject()(
+                                    authConnector: AuthConnector,
+                                    parser: BodyParsers.Default,
+                                    registrationConnector: EtmpRegistrationConnector,
+                                    config: AppConfig
+                                  )(implicit val executionContext: ExecutionContext) {
+  def apply(maybeRequestedIntermediaryNumber: Option[String]): AuthAction =
+    new AuthAction(authConnector, parser, registrationConnector, config, maybeRequestedIntermediaryNumber)
 }

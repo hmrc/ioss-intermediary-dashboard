@@ -25,7 +25,7 @@ import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain.Vrn
-import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.{AuthAction, FakeAuthAction}
+import uk.gov.hmrc.iossintermediarydashboard.controllers.actions.{AuthAction, AuthActionProvider, FakeAuthActionProvider}
 import uk.gov.hmrc.iossintermediarydashboard.generators.Generators
 import uk.gov.hmrc.iossintermediarydashboard.models.DesAddress
 import uk.gov.hmrc.iossintermediarydashboard.models.des.VatCustomerInfo
@@ -54,7 +54,7 @@ trait BaseSpec
     
     new GuiceApplicationBuilder()
       .overrides(
-        bind[AuthAction].to[FakeAuthAction],
+        bind[AuthActionProvider].to[FakeAuthActionProvider],
         bind[Clock].toInstance(clockToBind)
       )
   }

@@ -15,9 +15,14 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeAuthAction @Inject()(bodyParsers: BodyParsers.Default)
-  extends AuthActionImpl(mock[AuthConnector], bodyParsers, mock[EtmpRegistrationConnector], mock[AppConfig])
-    with OptionValues
+class FakeAuthAction(bodyParsers: BodyParsers.Default)
+  extends AuthAction(
+    mock[AuthConnector],
+    bodyParsers,
+    mock[EtmpRegistrationConnector],
+    mock[AppConfig],
+    None
+  ) with OptionValues
     with Generators {
 
   private val etmpDisplayRegistration: EtmpDisplayRegistration = arbitraryEtmpDisplayRegistration.arbitrary.sample.value
@@ -25,4 +30,10 @@ class FakeAuthAction @Inject()(bodyParsers: BodyParsers.Default)
   override def invokeBlock[A](request: Request[A], block: AuthorisedRequest[A] => Future[Result]): Future[Result] = {
     block(AuthorisedRequest(request, "id", Vrn("123456789"), "IN9001234567", etmpDisplayRegistration))
   }
+}
+
+class FakeAuthActionProvider @Inject()(bodyParsers: BodyParsers.Default)
+  extends AuthActionProvider(mock[AuthConnector], bodyParsers, mock[EtmpRegistrationConnector], mock[AppConfig]) {
+
+  override def apply(maybeIntermediaryNumber: Option[String] = None): AuthAction = new FakeAuthAction(bodyParsers)
 }

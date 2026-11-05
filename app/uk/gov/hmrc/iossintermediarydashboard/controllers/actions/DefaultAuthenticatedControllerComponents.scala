@@ -28,11 +28,11 @@ trait AuthenticatedControllerComponents extends ControllerComponents {
 
   def actionBuilder: DefaultActionBuilder
 
-  def identify: AuthAction
+  def identify: AuthActionProvider
 
-  def auth(): ActionBuilder[AuthorisedRequest, AnyContent] =
+  def auth(requestedIntermediaryNumber: Option[String] = None): ActionBuilder[AuthorisedRequest, AnyContent] =
     actionBuilder andThen
-      identify
+      identify(requestedIntermediaryNumber)
 }
 
 case class DefaultAuthenticatedControllerComponents @Inject()(
@@ -42,5 +42,5 @@ case class DefaultAuthenticatedControllerComponents @Inject()(
                                                                langs: Langs,
                                                                fileMimeTypes: FileMimeTypes,
                                                                executionContext: ExecutionContext,
-                                                               identify: AuthAction
+                                                               identify: AuthActionProvider
                                                              ) extends AuthenticatedControllerComponents
