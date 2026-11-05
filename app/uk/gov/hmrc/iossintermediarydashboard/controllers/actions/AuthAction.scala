@@ -55,7 +55,7 @@ class AuthAction(
           case (Some(intermediaryNumber), requestedIntermediaryNumber) if requestedIntermediaryNumber.isEmpty || requestedIntermediaryNumber.contains(intermediaryNumber) =>
             getRegistrationAndBlock(request, block, vrn, internalId, intermediaryNumber)
           case (Some(intermediaryNumber), Some(requestedIntermediaryNumber)) if allIntermediaryNumbersFromEnrolment(enrolments).contains(requestedIntermediaryNumber) =>
-            getRegistrationAndBlock(request, block, vrn, internalId, intermediaryNumber)
+            getRegistrationAndBlock(request, block, vrn, internalId, requestedIntermediaryNumber)
           case _ =>
             logger.warn(s"Insufficient enrolments")
             throw InsufficientEnrolments("Insufficient enrolments")
